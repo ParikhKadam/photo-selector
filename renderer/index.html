@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
+  <title>Photo Selector</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <h1>Photo Selector</h1>
+      <p>Select and organize your photos with ease</p>
+    </header>
+    
+    <main class="main-content">
+      <div class="welcome-section">
+        <div class="welcome-card">
+          <h2>Welcome to Photo Selector</h2>
+          <p>A simple and elegant way to browse, select, and organize your photo collection.</p>
+          <button id="open-folder-btn" class="primary-button">
+            <span class="icon">📁</span>
+            Open Photo Folder
+          </button>
+        </div>
+      </div>
+
+      <div class="photo-grid" id="photo-grid" style="display: none;">
+        <!-- Photos will be dynamically inserted here -->
+      </div>
+    </main>
+
+    <footer class="footer">
+      <p>Built with Electron & TypeScript</p>
+    </footer>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

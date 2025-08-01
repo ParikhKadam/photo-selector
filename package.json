@@ -1,0 +1,31 @@
+{
+  "name": "photo-selector",
+  "version": "1.0.0",
+  "description": "A simple and elegant photo selector application built with Electron and TypeScript",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "npm run build && electron .",
+    "dev": "tsc && electron . --dev",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "electron",
+    "photo",
+    "selector",
+    "typescript",
+    "desktop"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^24.1.0",
+    "electron": "^37.2.5",
+    "electron-builder": "^26.0.12",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.2"
+  }
+}
