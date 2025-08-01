@@ -4,8 +4,11 @@ class PhotoSelectorRenderer {
   constructor() {
     this.currentMediaFiles = []; // Store current media files for navigation
     this.currentImageIndex = -1; // Track current image index in preview
+    this.starredPhotosCache = new Set(); // Cache for starred photos
+    this.isViewingStarredPhotos = false; // Track if currently viewing starred photos
     this.initializeEventListeners();
     this.createPreviewModal();
+    this.loadStarredPhotosCache();
   }
 
   initializeEventListeners() {
@@ -21,6 +24,11 @@ class PhotoSelectorRenderer {
     if (window.electronAPI) {
       window.electronAPI.onFolderSelected((folderPath) => {
         this.loadPhotosFromFolder(folderPath);
+      });
+
+      // Listen for show starred photos command
+      window.electronAPI.onShowStarredPhotos(() => {
+        this.showStarredPhotos();
       });
     }
   }
@@ -40,6 +48,9 @@ class PhotoSelectorRenderer {
 
   async loadPhotosFromFolder(folderPath) {
     console.log('Loading photos from:', folderPath);
+    
+    // Reset starred photos view flag
+    this.isViewingStarredPhotos = false;
     
     // Hide welcome section and show photo grid
     const welcomeSection = document.querySelector('.welcome-section');
@@ -73,6 +84,9 @@ class PhotoSelectorRenderer {
           const photoItem = this.createPhotoItem(file, index);
           photoGrid.appendChild(photoItem);
         });
+
+        // Load starred status for current files
+        await this.updateStarredStatus(mediaFiles.map(f => f.path));
         
       } catch (error) {
         console.error('Error loading media files:', error);
@@ -128,6 +142,10 @@ class PhotoSelectorRenderer {
           </div>
         </div>
         <div class="preview-controls">
+          <button onclick="photoRenderer.toggleCurrentImageStar()" class="preview-button star-preview-btn" id="previewStarButton" title="Add to starred photos">
+            <span class="star-icon">★</span>
+            <span class="star-text">Star</span>
+          </button>
           <button onclick="photoRenderer.toggleFullscreen()" class="preview-button fullscreen-btn">
             <span class="fullscreen-icon">⛶</span>
             Fullscreen
@@ -146,6 +164,8 @@ class PhotoSelectorRenderer {
           this.closePreview();
         } else if (e.key === 'f' || e.key === 'F') {
           this.toggleFullscreen();
+        } else if (e.key === 's' || e.key === 'S') {
+          this.toggleCurrentImageStar();
         } else if (e.key === 'ArrowLeft') {
           this.navigateImage(-1);
         } else if (e.key === 'ArrowRight') {
@@ -215,6 +235,9 @@ class PhotoSelectorRenderer {
     
     // Update navigation button states
     this.updateNavigationButtons();
+    
+    // Update star button state
+    this.updatePreviewStarButton();
     
     // Set file information
     previewTitle.textContent = currentFile.name;
@@ -366,12 +389,31 @@ class PhotoSelectorRenderer {
           <span class="file-size">${fileSize}</span>
         </div>
       </div>
+      <button class="star-button" title="Add to starred photos" data-file-path="${file.path}">
+        <span class="star-icon">★</span>
+      </button>
     `;
     
+    // Add data attribute for easier star status updates
+    photoItem.setAttribute('data-file-path', file.path);
+    
     // Add click handler for photo selection
-    photoItem.addEventListener('click', () => {
-      this.selectPhoto(file, index);
+    photoItem.addEventListener('click', (e) => {
+      // Don't select if clicking on star button
+      if (!e.target.closest('.star-button')) {
+        this.selectPhoto(file, index);
+      }
     });
+    
+    // Add star button click handler
+    const starButton = photoItem.querySelector('.star-button');
+    if (starButton) {
+      starButton.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.togglePhotoStar(file, starButton);
+      });
+    }
     
     // Add double-click handler for preview (only for images)
     if (file.type === 'image') {
@@ -383,6 +425,215 @@ class PhotoSelectorRenderer {
     }
     
     return photoItem;
+  }
+
+  // Star/Shortlist functionality methods
+  async loadStarredPhotosCache() {
+    try {
+      const result = await window.electronAPI.getStarredPhotos();
+      if (result.success) {
+        this.starredPhotosCache = new Set(result.photos.map(photo => photo.filePath));
+      }
+    } catch (error) {
+      console.error('Error loading starred photos cache:', error);
+    }
+  }
+
+  async updateStarredStatus(filePaths) {
+    if (!filePaths || filePaths.length === 0) return;
+
+    try {
+      const result = await window.electronAPI.getStarredPhotosByPaths(filePaths);
+      if (result.success) {
+        // Update cache
+        this.starredPhotosCache = new Set([...this.starredPhotosCache, ...result.starredPaths]);
+        
+        // Update UI for starred photos
+        result.starredPaths.forEach(filePath => {
+          const photoItem = document.querySelector(`[data-file-path="${filePath}"]`);
+          if (photoItem) {
+            const starButton = photoItem.querySelector('.star-button');
+            if (starButton) {
+              starButton.classList.add('starred');
+              starButton.title = 'Remove from starred photos';
+            }
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error updating starred status:', error);
+    }
+  }
+
+  async togglePhotoStar(file, starButton) {
+    const isCurrentlyStarred = this.starredPhotosCache.has(file.path);
+    
+    try {
+      if (isCurrentlyStarred) {
+        // Unstar the photo
+        const result = await window.electronAPI.unstarPhoto(file.path);
+        if (result.success) {
+          this.starredPhotosCache.delete(file.path);
+          starButton.classList.remove('starred');
+          starButton.title = 'Add to starred photos';
+          
+          // If we're viewing starred photos, remove the item from view
+          if (this.isViewingStarredPhotos) {
+            const photoItem = starButton.closest('.photo-item');
+            if (photoItem) {
+              photoItem.remove();
+              
+              // Check if there are no more starred photos
+              const remainingItems = document.querySelectorAll('.photo-item').length;
+              if (remainingItems === 0) {
+                const photoGrid = document.getElementById('photo-grid');
+                photoGrid.innerHTML = '<div class="no-files">No starred photos found.</div>';
+              }
+            }
+          }
+        }
+      } else {
+        // Star the photo
+        const photoData = {
+          filePath: file.path,
+          fileName: file.name,
+          fileSize: file.size,
+          fileType: file.type,
+          lastModified: file.lastModified.toISOString()
+        };
+        
+        const result = await window.electronAPI.starPhoto(photoData);
+        if (result.success) {
+          this.starredPhotosCache.add(file.path);
+          starButton.classList.add('starred');
+          starButton.title = 'Remove from starred photos';
+        }
+      }
+    } catch (error) {
+      console.error('Error toggling photo star:', error);
+    }
+  }
+
+  async showStarredPhotos() {
+    console.log('Showing starred photos');
+    
+    // Hide welcome section and show photo grid
+    const welcomeSection = document.querySelector('.welcome-section');
+    const photoGrid = document.getElementById('photo-grid');
+    
+    if (welcomeSection) {
+      welcomeSection.style.display = 'none';
+    }
+    
+    if (photoGrid) {
+      photoGrid.style.display = 'grid';
+      photoGrid.innerHTML = '<div class="loading">Loading starred photos...</div>';
+      
+      try {
+        const result = await window.electronAPI.getStarredPhotos();
+        
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to load starred photos');
+        }
+        
+        const starredPhotos = result.photos;
+        
+        // Convert to media files format
+        this.currentMediaFiles = starredPhotos.map(photo => ({
+          name: photo.fileName,
+          path: photo.filePath,
+          type: photo.fileType,
+          size: photo.fileSize,
+          lastModified: new Date(photo.lastModified)
+        }));
+        
+        this.isViewingStarredPhotos = true;
+        
+        // Clear loading message
+        photoGrid.innerHTML = '';
+        
+        if (starredPhotos.length === 0) {
+          photoGrid.innerHTML = '<div class="no-files">No starred photos found.</div>';
+          return;
+        }
+        
+        // Create photo items for each starred photo
+        starredPhotos.forEach((photo, index) => {
+          const file = {
+            name: photo.fileName,
+            path: photo.filePath,
+            type: photo.fileType,
+            size: photo.fileSize,
+            lastModified: new Date(photo.lastModified)
+          };
+          const photoItem = this.createPhotoItem(file, index);
+          
+          // Mark as starred
+          const starButton = photoItem.querySelector('.star-button');
+          if (starButton) {
+            starButton.classList.add('starred');
+            starButton.title = 'Remove from starred photos';
+          }
+          
+          photoGrid.appendChild(photoItem);
+        });
+        
+      } catch (error) {
+        console.error('Error loading starred photos:', error);
+        photoGrid.innerHTML = '<div class="error">Error loading starred photos.</div>';
+      }
+    }
+  }
+
+  async toggleCurrentImageStar() {
+    if (this.currentImageIndex < 0 || this.currentImageIndex >= this.currentMediaFiles.length) {
+      return;
+    }
+
+    const currentFile = this.currentMediaFiles[this.currentImageIndex];
+    const previewStarButton = document.getElementById('previewStarButton');
+    
+    if (previewStarButton) {
+      await this.togglePhotoStar(currentFile, previewStarButton);
+      this.updatePreviewStarButton();
+      
+      // Also update the grid star button if visible
+      const gridStarButton = document.querySelector(`[data-file-path="${currentFile.path}"] .star-button`);
+      if (gridStarButton) {
+        const isStarred = this.starredPhotosCache.has(currentFile.path);
+        if (isStarred) {
+          gridStarButton.classList.add('starred');
+          gridStarButton.title = 'Remove from starred photos';
+        } else {
+          gridStarButton.classList.remove('starred');
+          gridStarButton.title = 'Add to starred photos';
+        }
+      }
+    }
+  }
+
+  updatePreviewStarButton() {
+    if (this.currentImageIndex < 0 || this.currentImageIndex >= this.currentMediaFiles.length) {
+      return;
+    }
+
+    const currentFile = this.currentMediaFiles[this.currentImageIndex];
+    const previewStarButton = document.getElementById('previewStarButton');
+    const isStarred = this.starredPhotosCache.has(currentFile.path);
+    
+    if (previewStarButton) {
+      const starText = previewStarButton.querySelector('.star-text');
+      
+      if (isStarred) {
+        previewStarButton.classList.add('starred');
+        previewStarButton.title = 'Remove from starred photos (S)';
+        if (starText) starText.textContent = 'Unstar';
+      } else {
+        previewStarButton.classList.remove('starred');
+        previewStarButton.title = 'Add to starred photos (S)';
+        if (starText) starText.textContent = 'Star';
+      }
+    }
   }
 
   selectPhoto(photo) {

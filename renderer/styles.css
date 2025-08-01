@@ -560,3 +560,91 @@ body {
     gap: 15px;
   }
 }
+
+/* Star/Shortlist Button Styles */
+.star-button {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(0, 0, 0, 0.7);
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #ffd700;
+  font-size: 16px;
+  transition: all 0.3s ease;
+  z-index: 2;
+  opacity: 0;
+}
+
+.photo-item:hover .star-button {
+  opacity: 1;
+}
+
+.star-button:hover {
+  background: rgba(0, 0, 0, 0.9);
+  transform: scale(1.1);
+}
+
+.star-button.starred {
+  opacity: 1;
+  background: rgba(255, 215, 0, 0.9);
+  color: #333;
+}
+
+.star-button.starred:hover {
+  background: rgba(255, 215, 0, 1);
+}
+
+.star-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+/* Preview Star Button */
+.star-preview-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  color: #ffd700;
+  margin-right: 10px;
+}
+
+.star-preview-btn:hover {
+  background: rgba(255, 215, 0, 0.2);
+  border-color: #ffd700;
+}
+
+.star-preview-btn.starred {
+  background: rgba(255, 215, 0, 0.9);
+  border-color: #ffd700;
+  color: #333;
+}
+
+.star-preview-btn.starred:hover {
+  background: rgba(255, 215, 0, 1);
+}
+
+.star-preview-btn .star-icon {
+  margin-right: 5px;
+}
+
+/* Ensure photo items have relative positioning for absolute star buttons */
+.photo-item {
+  position: relative;
+}
+
+/* Animation for starring */
+@keyframes starPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+.star-button.starred .star-icon {
+  animation: starPulse 0.3s ease-in-out;
+}

@@ -1,17 +1,28 @@
 import { app, BrowserWindow, Menu, ipcMain, dialog } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
+import { DatabaseManager, StarredPhoto } from './database';
 
 class PhotoSelectorApp {
   private mainWindow: BrowserWindow | null = null;
+  private dbManager: DatabaseManager;
 
   constructor() {
+    this.dbManager = new DatabaseManager();
     this.init();
   }
 
   private init(): void {
     // This method will be called when Electron has finished initialization
-    app.whenReady().then(() => {
+    app.whenReady().then(async () => {
+      // Initialize database
+      try {
+        await this.dbManager.initialize();
+        console.log('Database initialized successfully');
+      } catch (error) {
+        console.error('Failed to initialize database:', error);
+      }
+
       this.createWindow();
       this.setupMenu();
       this.setupIpcHandlers();
@@ -26,7 +37,14 @@ class PhotoSelectorApp {
     });
 
     // Quit when all windows are closed, except on macOS
-    app.on('window-all-closed', () => {
+    app.on('window-all-closed', async () => {
+      // Close database connection
+      try {
+        await this.dbManager.close();
+      } catch (error) {
+        console.error('Error closing database:', error);
+      }
+
       if (process.platform !== 'darwin') {
         app.quit();
       }
@@ -86,6 +104,14 @@ class PhotoSelectorApp {
               if (!result.canceled && result.filePaths.length > 0) {
                 this.mainWindow?.webContents.send('folder-selected', result.filePaths[0]);
               }
+            }
+          },
+          { type: 'separator' },
+          {
+            label: 'View Starred Photos',
+            accelerator: 'CmdOrCtrl+Shift+S',
+            click: () => {
+              this.mainWindow?.webContents.send('show-starred-photos');
             }
           },
           { type: 'separator' },
@@ -182,6 +208,94 @@ class PhotoSelectorApp {
         console.error('Error getting image preview:', error);
         return {
           success: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        };
+      }
+    });
+
+    // Handle starring a photo
+    ipcMain.handle('star:addPhoto', async (event, photoData: Omit<StarredPhoto, 'id' | 'dateStarred'>) => {
+      try {
+        const result = await this.dbManager.starPhoto(photoData);
+        return { success: result };
+      } catch (error) {
+        console.error('Error starring photo:', error);
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        };
+      }
+    });
+
+    // Handle unstarring a photo
+    ipcMain.handle('star:removePhoto', async (event, filePath: string) => {
+      try {
+        const result = await this.dbManager.unstarPhoto(filePath);
+        return { success: result };
+      } catch (error) {
+        console.error('Error unstarring photo:', error);
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        };
+      }
+    });
+
+    // Handle checking if a photo is starred
+    ipcMain.handle('star:isPhotoStarred', async (event, filePath: string) => {
+      try {
+        const isStarred = await this.dbManager.isPhotoStarred(filePath);
+        return { success: true, isStarred };
+      } catch (error) {
+        console.error('Error checking if photo is starred:', error);
+        return {
+          success: false,
+          isStarred: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        };
+      }
+    });
+
+    // Handle getting all starred photos
+    ipcMain.handle('star:getStarredPhotos', async () => {
+      try {
+        const starredPhotos = await this.dbManager.getStarredPhotos();
+        return { success: true, photos: starredPhotos };
+      } catch (error) {
+        console.error('Error getting starred photos:', error);
+        return {
+          success: false,
+          photos: [],
+          error: error instanceof Error ? error.message : 'Unknown error'
+        };
+      }
+    });
+
+    // Handle getting starred status for multiple photos
+    ipcMain.handle('star:getStarredPhotosByPaths', async (event, filePaths: string[]) => {
+      try {
+        const starredPaths = await this.dbManager.getStarredPhotosByPaths(filePaths);
+        return { success: true, starredPaths: Array.from(starredPaths) };
+      } catch (error) {
+        console.error('Error getting starred photos by paths:', error);
+        return {
+          success: false,
+          starredPaths: [],
+          error: error instanceof Error ? error.message : 'Unknown error'
+        };
+      }
+    });
+
+    // Handle cleanup of non-existent files
+    ipcMain.handle('star:cleanupNonExistentFiles', async () => {
+      try {
+        const removedCount = await this.dbManager.cleanupNonExistentFiles();
+        return { success: true, removedCount };
+      } catch (error) {
+        console.error('Error cleaning up non-existent files:', error);
+        return {
+          success: false,
+          removedCount: 0,
           error: error instanceof Error ? error.message : 'Unknown error'
         };
       }
