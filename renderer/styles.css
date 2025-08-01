@@ -457,6 +457,20 @@ body {
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
   opacity: 1;
   background: #000;
+  transition: opacity 0.3s ease;
+}
+
+/* Remove any gray overlay or poster effects */
+.preview-video::-webkit-media-controls-overlay-play-button {
+  display: block !important;
+  opacity: 1 !important;
+  background: rgba(0, 0, 0, 0.7) !important;
+  border-radius: 50% !important;
+}
+
+.preview-video::-webkit-media-controls-start-playback-button {
+  display: block !important;
+  opacity: 1 !important;
 }
 
 .preview-video::-webkit-media-controls-panel {
