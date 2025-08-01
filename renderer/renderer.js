@@ -194,7 +194,7 @@ class PhotoSelectorRenderer {
         <div class="preview-content">
           <div class="zoom-container" id="zoomContainer">
             <img id="previewImage" class="preview-image" alt="Preview" style="display: none;">
-            <video id="previewVideo" class="preview-video" controls style="display: none;">
+            <video id="previewVideo" class="preview-video" controls preload="metadata" style="display: none;">
               <source id="videoSource" src="" type="">
               Your browser does not support the video element.
             </video>
@@ -398,6 +398,28 @@ class PhotoSelectorRenderer {
         if (currentFile.type === 'video') {
           // Handle video files
           previewVideo.src = `file://${result.filePath}`;
+          
+          // Remove any poster to prevent gray overlay
+          previewVideo.removeAttribute('poster');
+          
+          // Add event listeners to handle video loading states
+          previewVideo.onloadstart = () => {
+            previewVideo.style.opacity = '0.7';
+          };
+          
+          previewVideo.oncanplay = () => {
+            previewVideo.style.opacity = '1';
+          };
+          
+          previewVideo.onloadeddata = () => {
+            previewVideo.style.opacity = '1';
+          };
+          
+          previewVideo.onerror = () => {
+            previewVideo.style.opacity = '0.5';
+            console.error('Error loading video:', currentFile.path);
+          };
+          
           previewVideo.load(); // Reload the video element
           previewVideo.style.display = 'block';
           previewVideo.style.opacity = '1';
