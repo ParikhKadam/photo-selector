@@ -293,6 +293,45 @@ body {
   transform: scale(1.1);
 }
 
+/* Navigation buttons */
+.nav-button {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0, 0, 0, 0.5);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  font-size: 24px;
+  cursor: pointer;
+  z-index: 1001;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(10px);
+}
+
+.nav-button:hover {
+  background: rgba(0, 0, 0, 0.7);
+  transform: translateY(-50%) scale(1.1);
+}
+
+.nav-prev {
+  left: 20px;
+}
+
+.nav-next {
+  right: 20px;
+}
+
+.nav-icon {
+  font-size: 28px;
+  line-height: 1;
+}
+
 .preview-content {
   display: flex;
   flex-direction: column;
@@ -332,6 +371,11 @@ body {
   flex-wrap: wrap;
   font-size: 0.9rem;
   color: #7f8c8d;
+}
+
+#previewIndex {
+  font-weight: 600;
+  color: #667eea;
 }
 
 .preview-controls {
@@ -443,6 +487,20 @@ body {
   
   .preview-modal.fullscreen-mode .preview-image {
     max-height: calc(100vh - 140px);
+  }
+  
+  .nav-button {
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+  }
+  
+  .nav-prev {
+    left: 10px;
+  }
+  
+  .nav-next {
+    right: 10px;
   }
 }
 
