@@ -113,6 +113,90 @@ body {
   font-size: 1.2rem;
 }
 
+/* Toolbar styles */
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  padding: 15px 20px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.toolbar-left,
+.toolbar-right {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.toolbar-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: rgba(255, 255, 255, 0.8);
+  border: 2px solid rgba(102, 126, 234, 0.3);
+  border-radius: 8px;
+  color: #667eea;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-decoration: none;
+}
+
+.toolbar-button:hover {
+  background: rgba(102, 126, 234, 0.1);
+  border-color: #667eea;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+}
+
+.toolbar-button.active {
+  background: #667eea;
+  color: white;
+  border-color: #667eea;
+}
+
+.toolbar-button.filter-button.active {
+  background: #ffd700;
+  color: #333;
+  border-color: #ffd700;
+}
+
+.toolbar-button.export-button {
+  background: rgba(46, 204, 113, 0.1);
+  border-color: rgba(46, 204, 113, 0.3);
+  color: #2ecc71;
+}
+
+.toolbar-button.export-button:hover {
+  background: rgba(46, 204, 113, 0.2);
+  border-color: #2ecc71;
+  box-shadow: 0 4px 12px rgba(46, 204, 113, 0.2);
+}
+
+.toolbar-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.toolbar-button .icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.toolbar-button .text {
+  font-size: 14px;
+  font-weight: 600;
+}
+
 /* Photo grid */
 .photo-grid {
   display: grid;
@@ -558,6 +642,28 @@ body {
   .photo-grid {
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
     gap: 15px;
+  }
+
+  .toolbar {
+    flex-direction: column;
+    gap: 15px;
+    padding: 15px;
+  }
+
+  .toolbar-left,
+  .toolbar-right {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .toolbar-button .text {
+    display: none;
+  }
+
+  .toolbar-button {
+    padding: 10px;
+    min-width: 44px;
+    justify-content: center;
   }
 }
 

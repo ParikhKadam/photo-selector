@@ -9,6 +9,8 @@ A simple and elegant desktop application for browsing, selecting, and organizing
 - 🖼️ **Photo Browsing**: Browse photos from any folder on your computer
 - 🔍 **High-Quality Preview**: Double-click images for full-resolution preview with fullscreen mode
 - ⭐ **Star/Shortlist Photos**: Mark your favorite photos with star ratings for easy access
+- 🔽 **Smart Filtering**: Filter to show only starred photos in any folder
+- 📤 **Export Starred Photos**: Copy all your starred photos to any destination folder
 - 🎨 **Modern UI**: Clean, modern interface with glassmorphism design
 - ⚡ **Fast Performance**: Built on Electron for native desktop performance
 - 🧭 **Image Navigation**: Navigate through images using arrow keys, mouse wheel, or navigation buttons
@@ -28,14 +30,25 @@ The application features a beautiful welcome screen and an intuitive photo grid 
 - **Select Images**: Click any thumbnail to select it
 - **Preview Images**: Double-click any image thumbnail to open full-resolution preview
 - **Star Photos**: Click the star button (★) on any photo to add it to your favorites
+- **Filter Photos**: Use the "Show Starred Only" button in the toolbar to filter to starred photos
+- **Export Starred**: Use the "Export Starred" button to copy all starred photos to a folder
 - **View Starred Photos**: Use Ctrl+Shift+S or File menu to view all starred photos
 
 ### Star/Shortlist Features
 - **Grid View Starring**: Hover over any photo to see the star button, click to star/unstar
 - **Preview Starring**: In image preview mode, use the Star button or press 'S' key
+- **Smart Filtering**: Use the "Show Starred Only" button to filter current folder to starred photos
 - **Starred Collection**: Access all your starred photos via the File menu or Ctrl+Shift+S
+- **Export Functionality**: Copy all starred photos to any folder with the "Export Starred" button
 - **Persistent Storage**: Starred photos are saved to a local database in your home directory
 - **Cross-Platform**: Database location adapts to your operating system (Windows/Mac/Linux)
+
+### Export Features
+- **One-Click Export**: Export all starred photos with a single button click
+- **Smart Naming**: Automatically handles duplicate filenames by appending numbers
+- **Progress Feedback**: Visual feedback during export process
+- **Error Handling**: Detailed reporting of successful and failed exports
+- **Folder Selection**: Choose any destination folder for your exported photos
 
 ### Image Preview Navigation
 - **Mouse Navigation**: 

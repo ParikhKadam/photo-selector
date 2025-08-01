@@ -300,6 +300,35 @@ class PhotoSelectorApp {
         };
       }
     });
+
+    // Handle export folder selection
+    ipcMain.handle('dialog:selectExportFolder', async () => {
+      const result = await dialog.showOpenDialog(this.mainWindow!, {
+        properties: ['openDirectory', 'createDirectory'],
+        title: 'Select Export Destination Folder'
+      });
+      
+      if (!result.canceled && result.filePaths.length > 0) {
+        return result.filePaths[0];
+      }
+      
+      return undefined;
+    });
+
+    // Handle exporting starred photos
+    ipcMain.handle('export:starredPhotos', async (event, exportPath: string) => {
+      try {
+        const starredPhotos = await this.dbManager.getStarredPhotos();
+        const results = await this.exportPhotos(starredPhotos, exportPath);
+        return { success: true, results };
+      } catch (error) {
+        console.error('Error exporting starred photos:', error);
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        };
+      }
+    });
   }
 
   private async fileExists(filePath: string): Promise<boolean> {
@@ -354,6 +383,54 @@ class PhotoSelectorApp {
     }
     
     return files;
+  }
+
+  private async exportPhotos(starredPhotos: StarredPhoto[], exportPath: string): Promise<{
+    exported: number;
+    failed: number;
+    errors: string[];
+  }> {
+    let exported = 0;
+    let failed = 0;
+    const errors: string[] = [];
+
+    for (const photo of starredPhotos) {
+      try {
+        // Check if source file exists
+        const sourceExists = await this.fileExists(photo.filePath);
+        if (!sourceExists) {
+          failed++;
+          errors.push(`Source file not found: ${photo.fileName}`);
+          continue;
+        }
+
+        // Create destination path
+        const destPath = path.join(exportPath, photo.fileName);
+        
+        // Handle duplicate filenames by appending a number
+        let finalDestPath = destPath;
+        let counter = 1;
+        while (await this.fileExists(finalDestPath)) {
+          const ext = path.extname(photo.fileName);
+          const nameWithoutExt = path.basename(photo.fileName, ext);
+          finalDestPath = path.join(exportPath, `${nameWithoutExt}_${counter}${ext}`);
+          counter++;
+        }
+
+        // Copy the file
+        await fs.promises.copyFile(photo.filePath, finalDestPath);
+        exported++;
+        console.log(`Exported: ${photo.fileName} -> ${path.basename(finalDestPath)}`);
+        
+      } catch (error) {
+        failed++;
+        const errorMsg = `Failed to export ${photo.fileName}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+        errors.push(errorMsg);
+        console.error(errorMsg);
+      }
+    }
+
+    return { exported, failed, errors };
   }
 }
 

@@ -26,6 +26,26 @@
         </div>
       </div>
 
+      <!-- Toolbar for filters and actions -->
+      <div class="toolbar" id="toolbar" style="display: none;">
+        <div class="toolbar-left">
+          <button id="filter-starred-btn" class="toolbar-button filter-button" title="Show only starred photos">
+            <span class="icon">⭐</span>
+            <span class="text">Show Starred Only</span>
+          </button>
+          <button id="show-all-btn" class="toolbar-button" title="Show all photos" style="display: none;">
+            <span class="icon">🔄</span>
+            <span class="text">Show All</span>
+          </button>
+        </div>
+        <div class="toolbar-right">
+          <button id="export-starred-btn" class="toolbar-button export-button" title="Export starred photos to a folder">
+            <span class="icon">📤</span>
+            <span class="text">Export Starred</span>
+          </button>
+        </div>
+      </div>
+
       <div class="photo-grid" id="photo-grid" style="display: none;">
         <!-- Photos will be dynamically inserted here -->
       </div>

@@ -36,6 +36,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('star:cleanupNonExistentFiles'),
   onShowStarredPhotos: (callback: () => void) => 
     ipcRenderer.on('show-starred-photos', callback),
+  
+  // Export functionality
+  selectExportFolder: () => 
+    ipcRenderer.invoke('dialog:selectExportFolder'),
+  exportStarredPhotos: (exportPath: string) => 
+    ipcRenderer.invoke('export:starredPhotos', exportPath),
 });
 
 // Type definitions for the exposed API
@@ -56,6 +62,10 @@ declare global {
       getStarredPhotosByPaths: (filePaths: string[]) => Promise<{success: boolean, starredPaths: string[], error?: string}>;
       cleanupNonExistentFiles: () => Promise<{success: boolean, removedCount: number, error?: string}>;
       onShowStarredPhotos: (callback: () => void) => void;
+      
+      // Export functionality
+      selectExportFolder: () => Promise<string | undefined>;
+      exportStarredPhotos: (exportPath: string) => Promise<{success: boolean, results?: {exported: number, failed: number, errors: string[]}, error?: string}>;
     };
   }
 }
