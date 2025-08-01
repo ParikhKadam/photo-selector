@@ -193,7 +193,11 @@ class PhotoSelectorRenderer {
         </button>
         <div class="preview-content">
           <div class="zoom-container" id="zoomContainer">
-            <img id="previewImage" class="preview-image" alt="Preview">
+            <img id="previewImage" class="preview-image" alt="Preview" style="display: none;">
+            <video id="previewVideo" class="preview-video" controls style="display: none;">
+              <source id="videoSource" src="" type="">
+              Your browser does not support the video element.
+            </video>
           </div>
           <div class="preview-info">
             <h3 id="previewTitle">Image Title</h3>
@@ -266,38 +270,41 @@ class PhotoSelectorRenderer {
       }
     });
 
-    // Add mouse wheel navigation and zoom
+    // Add mouse wheel zoom (images only) - disable navigation via scroll to prevent conflicts
     modal.addEventListener('wheel', (e) => {
       if (modal.style.display === 'flex') {
         e.preventDefault();
         
-        // Check for pinch-to-zoom gesture or two-finger scroll on trackpad
-        // On trackpad, deltaY will be smaller for zoom gestures
-        const isPinchZoom = e.ctrlKey || Math.abs(e.deltaY) < 50;
+        const previewImage = document.getElementById('previewImage');
+        const isImageVisible = previewImage && previewImage.style.display !== 'none';
         
-        if (isPinchZoom) {
-          // Zoom with Mouse Wheel or trackpad pinch
-          if (e.deltaY < 0) {
-            this.zoomIn();
-          } else {
-            this.zoomOut();
+        // Only allow zoom for images, completely disable scroll navigation in preview
+        if (isImageVisible) {
+          // Check for pinch-to-zoom gesture or two-finger scroll on trackpad
+          const isPinchZoom = e.ctrlKey || Math.abs(e.deltaY) < 50;
+          
+          if (isPinchZoom) {
+            // Zoom with Mouse Wheel or trackpad pinch
+            if (e.deltaY < 0) {
+              this.zoomIn();
+            } else {
+              this.zoomOut();
+            }
           }
-        } else {
-          // Navigate images with larger scroll movements
-          if (e.deltaY > 0) {
-            this.navigateImage(1); // Scroll down = next image
-          } else {
-            this.navigateImage(-1); // Scroll up = previous image
-          }
+          // Note: Removed navigation via scroll to prevent zoom/navigation conflicts
+          // Use arrow keys or navigation buttons instead
         }
       }
     });
 
-    // Add mouse drag support for panning when zoomed
+    // Add mouse drag support for panning when zoomed on images
     const zoomContainer = modal.querySelector('#zoomContainer');
     if (zoomContainer) {
       zoomContainer.addEventListener('mousedown', (e) => {
-        if (this.zoomLevel > 1) {
+        const previewImage = document.getElementById('previewImage');
+        const isImageVisible = previewImage && previewImage.style.display !== 'none';
+        
+        if (this.zoomLevel > 1 && isImageVisible) {
           this.isDragging = true;
           this.lastMouseX = e.clientX;
           this.lastMouseY = e.clientY;
@@ -326,7 +333,9 @@ class PhotoSelectorRenderer {
         if (this.isDragging) {
           this.isDragging = false;
           if (zoomContainer) {
-            zoomContainer.style.cursor = this.zoomLevel > 1 ? 'grab' : 'default';
+            const previewImage = document.getElementById('previewImage');
+            const isImageVisible = previewImage && previewImage.style.display !== 'none';
+            zoomContainer.style.cursor = (this.zoomLevel > 1 && isImageVisible) ? 'grab' : 'default';
           }
         }
       });
@@ -343,34 +352,14 @@ class PhotoSelectorRenderer {
       return;
     }
 
-    // Find the next image (skip videos)
-    let imageIndex = index;
-    const file = this.currentMediaFiles[imageIndex];
-    
-    if (file.type !== 'image') {
-      // Find next image
-      for (let i = index + 1; i < this.currentMediaFiles.length; i++) {
-        if (this.currentMediaFiles[i].type === 'image') {
-          imageIndex = i;
-          break;
-        }
-      }
-      // If no image found forward, search backward
-      if (imageIndex === index) {
-        for (let i = index - 1; i >= 0; i--) {
-          if (this.currentMediaFiles[i].type === 'image') {
-            imageIndex = i;
-            break;
-          }
-        }
-      }
-    }
-
-    this.currentImageIndex = imageIndex;
-    const currentFile = this.currentMediaFiles[imageIndex];
+    // Display the media file at the given index (image or video)
+    this.currentImageIndex = index;
+    const currentFile = this.currentMediaFiles[index];
     
     const modal = document.getElementById('imagePreviewModal');
     const previewImage = document.getElementById('previewImage');
+    const previewVideo = document.getElementById('previewVideo');
+    const videoSource = document.getElementById('videoSource');
     const previewTitle = document.getElementById('previewTitle');
     const previewSize = document.getElementById('previewSize');
     const previewType = document.getElementById('previewType');
@@ -379,7 +368,7 @@ class PhotoSelectorRenderer {
     // Show modal
     modal.style.display = 'flex';
     
-    // Reset zoom state when opening new image
+    // Reset zoom state when opening new media
     this.resetZoom();
     
     // Update navigation button states
@@ -393,36 +382,60 @@ class PhotoSelectorRenderer {
     previewSize.textContent = `Size: ${this.formatFileSize(currentFile.size)}`;
     previewType.textContent = `Type: ${currentFile.type.toUpperCase()}`;
     
-    // Update index display (only count images)
-    const imageFiles = this.currentMediaFiles.filter(f => f.type === 'image');
-    const currentImagePosition = imageFiles.findIndex(f => f.path === currentFile.path) + 1;
-    previewIndex.textContent = `${currentImagePosition} of ${imageFiles.length}`;
+    // Update index display (count all media files)
+    const currentMediaPosition = this.currentMediaFiles.findIndex(f => f.path === currentFile.path) + 1;
+    previewIndex.textContent = `${currentMediaPosition} of ${this.currentMediaFiles.length}`;
+    
+    // Hide both elements initially
+    previewImage.style.display = 'none';
+    previewVideo.style.display = 'none';
     
     try {
-      // Get image preview
+      // Get media preview
       const result = await window.electronAPI.getImagePreview(currentFile.path);
       
       if (result.success && result.exists) {
-        // Load the original quality image
-        previewImage.src = `file://${result.filePath}`;
-        previewImage.onload = () => {
-          previewImage.style.opacity = '1';
-        };
-        previewImage.onerror = () => {
-          previewImage.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjBmMGYwIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxOCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkVycm9yIExvYWRpbmcgSW1hZ2U8L3RleHQ+PC9zdmc+';
-        };
+        if (currentFile.type === 'video') {
+          // Handle video files
+          previewVideo.src = `file://${result.filePath}`;
+          previewVideo.load(); // Reload the video element
+          previewVideo.style.display = 'block';
+          previewVideo.style.opacity = '1';
+          
+          // Disable zoom controls for videos
+          this.setZoomControlsVisibility(false);
+        } else {
+          // Handle image files
+          previewImage.src = `file://${result.filePath}`;
+          previewImage.style.display = 'block';
+          previewImage.onload = () => {
+            previewImage.style.opacity = '1';
+          };
+          previewImage.onerror = () => {
+            previewImage.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjBmMGYwIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxOCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkVycm9yIExvYWRpbmcgSW1hZ2U8L3RleHQ+PC9zdmc+';
+          };
+          
+          // Enable zoom controls for images
+          this.setZoomControlsVisibility(true);
+        }
       } else {
+        // Show error state
+        previewImage.style.display = 'block';
         previewImage.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjBmMGYwIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxOCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkZpbGUgTm90IEZvdW5kPC90ZXh0Pjwvc3ZnPic=';
+        this.setZoomControlsVisibility(false);
       }
     } catch (error) {
       console.error('Error opening preview:', error);
+      previewImage.style.display = 'block';
       previewImage.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjBmMGYwIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxOCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkVycm9yIExvYWRpbmcgSW1hZ2U8L3RleHQ+PC9zdmc+';
+      this.setZoomControlsVisibility(false);
     }
   }
 
   closePreview() {
     const modal = document.getElementById('imagePreviewModal');
     const previewImage = document.getElementById('previewImage');
+    const previewVideo = document.getElementById('previewVideo');
     
     // Exit fullscreen if active
     if (document.fullscreenElement) {
@@ -431,45 +444,48 @@ class PhotoSelectorRenderer {
     
     modal.style.display = 'none';
     modal.classList.remove('fullscreen-mode');
+    
+    // Reset image
     previewImage.src = '';
     previewImage.style.opacity = '0';
+    previewImage.style.display = 'none';
+    
+    // Reset video
+    if (previewVideo) {
+      previewVideo.pause();
+      previewVideo.currentTime = 0;
+      previewVideo.style.display = 'none';
+      const videoSource = document.getElementById('videoSource');
+      if (videoSource) {
+        videoSource.src = '';
+      }
+    }
+    
     this.currentImageIndex = -1;
   }
 
   navigateImage(direction) {
     if (this.currentMediaFiles.length === 0) return;
     
-    const imageFiles = this.currentMediaFiles.filter(f => f.type === 'image');
-    if (imageFiles.length === 0) return;
-    
-    // Find current image position in image-only array
-    const currentFile = this.currentMediaFiles[this.currentImageIndex];
-    const currentImagePosition = imageFiles.findIndex(f => f.path === currentFile.path);
-    
-    // Calculate next position
-    let nextImagePosition = currentImagePosition + direction;
+    // Navigate through all media files (images and videos)
+    let nextIndex = this.currentImageIndex + direction;
     
     // Wrap around
-    if (nextImagePosition >= imageFiles.length) {
-      nextImagePosition = 0;
-    } else if (nextImagePosition < 0) {
-      nextImagePosition = imageFiles.length - 1;
+    if (nextIndex >= this.currentMediaFiles.length) {
+      nextIndex = 0;
+    } else if (nextIndex < 0) {
+      nextIndex = this.currentMediaFiles.length - 1;
     }
-    
-    // Find the index in the full media files array
-    const nextImageFile = imageFiles[nextImagePosition];
-    const nextIndex = this.currentMediaFiles.findIndex(f => f.path === nextImageFile.path);
     
     this.displayImageAtIndex(nextIndex);
   }
 
   updateNavigationButtons() {
-    const imageFiles = this.currentMediaFiles.filter(f => f.type === 'image');
     const prevBtn = document.querySelector('.nav-prev');
     const nextBtn = document.querySelector('.nav-next');
     
-    // Show/hide navigation buttons based on number of images
-    if (imageFiles.length <= 1) {
+    // Show/hide navigation buttons based on number of media files
+    if (this.currentMediaFiles.length <= 1) {
       prevBtn.style.display = 'none';
       nextBtn.style.display = 'none';
     } else {
@@ -564,14 +580,12 @@ class PhotoSelectorRenderer {
       });
     }
     
-    // Add double-click handler for preview (only for images)
-    if (file.type === 'image') {
-      photoItem.addEventListener('dblclick', () => {
-        this.openPreview(file, index);
-      });
-      photoItem.style.cursor = 'pointer';
-      photoItem.title = `Double-click to preview ${file.name}`;
-    }
+    // Add double-click handler for preview (for both images and videos)
+    photoItem.addEventListener('dblclick', () => {
+      this.openPreview(file, index);
+    });
+    photoItem.style.cursor = 'pointer';
+    photoItem.title = `Double-click to preview ${file.name}`;
     
     return photoItem;
   }
@@ -1053,15 +1067,19 @@ class PhotoSelectorRenderer {
 
   updateImageTransform() {
     const previewImage = document.getElementById('previewImage');
+    const previewVideo = document.getElementById('previewVideo');
     const zoomContainer = document.getElementById('zoomContainer');
     
-    if (previewImage) {
+    // Only apply zoom to images, not videos
+    if (previewImage && previewImage.style.display !== 'none') {
       previewImage.style.transform = `scale(${this.zoomLevel}) translate(${this.panX / this.zoomLevel}px, ${this.panY / this.zoomLevel}px)`;
       previewImage.style.transformOrigin = 'center center';
     }
     
     if (zoomContainer) {
-      zoomContainer.style.cursor = this.zoomLevel > 1 ? 'grab' : 'default';
+      // Only enable grab cursor for images when zoomed
+      const isImage = previewImage && previewImage.style.display !== 'none';
+      zoomContainer.style.cursor = (isImage && this.zoomLevel > 1) ? 'grab' : 'default';
     }
   }
 
@@ -1082,6 +1100,35 @@ class PhotoSelectorRenderer {
     }
     if (zoomLevelDisplay) {
       zoomLevelDisplay.textContent = `Zoom: ${Math.round(this.zoomLevel * 100)}%`;
+    }
+  }
+
+  getVideoMimeType(filename) {
+    const ext = filename.toLowerCase().split('.').pop();
+    const mimeTypes = {
+      'mp4': 'video/mp4',
+      'webm': 'video/webm',
+      'ogg': 'video/ogg',
+      'avi': 'video/avi',
+      'mov': 'video/quicktime',
+      'wmv': 'video/x-ms-wmv',
+      'flv': 'video/x-flv',
+      'mkv': 'video/x-matroska',
+      'm4v': 'video/mp4',
+      '3gp': 'video/3gpp'
+    };
+    return mimeTypes[ext] || 'video/mp4';
+  }
+
+  setZoomControlsVisibility(visible) {
+    const zoomControls = document.querySelector('.zoom-controls');
+    const zoomLevelDisplay = document.getElementById('zoomLevel');
+    
+    if (zoomControls) {
+      zoomControls.style.display = visible ? 'flex' : 'none';
+    }
+    if (zoomLevelDisplay) {
+      zoomLevelDisplay.style.display = visible ? 'inline' : 'none';
     }
   }
 }

@@ -449,6 +449,29 @@ body {
   transform-origin: center center;
 }
 
+.preview-video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  opacity: 1;
+  background: #000;
+}
+
+.preview-video::-webkit-media-controls-panel {
+  background-color: rgba(0, 0, 0, 0.8);
+}
+
+.preview-video::-webkit-media-controls-play-button,
+.preview-video::-webkit-media-controls-volume-slider,
+.preview-video::-webkit-media-controls-timeline,
+.preview-video::-webkit-media-controls-current-time-display,
+.preview-video::-webkit-media-controls-time-remaining-display {
+  color: white;
+  opacity: 0.9;
+}
+
 /* Zoom container */
 .zoom-container {
   position: relative;
