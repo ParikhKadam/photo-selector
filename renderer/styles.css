@@ -113,6 +113,102 @@ body {
   font-size: 1.2rem;
 }
 
+/* Toolbar styles */
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  padding: 15px 20px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.toolbar-left,
+.toolbar-right {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.toolbar-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: rgba(255, 255, 255, 0.8);
+  border: 2px solid rgba(102, 126, 234, 0.3);
+  border-radius: 8px;
+  color: #667eea;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-decoration: none;
+}
+
+.toolbar-button:hover {
+  background: rgba(102, 126, 234, 0.1);
+  border-color: #667eea;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+}
+
+.toolbar-button.active {
+  background: #667eea;
+  color: white;
+  border-color: #667eea;
+}
+
+.toolbar-button.filter-button.active {
+  background: #ffd700;
+  color: #333;
+  border-color: #ffd700;
+}
+
+.toolbar-button.export-button {
+  background: rgba(46, 204, 113, 0.1);
+  border-color: rgba(46, 204, 113, 0.3);
+  color: #2ecc71;
+}
+
+.toolbar-button.export-button:hover {
+  background: rgba(46, 204, 113, 0.2);
+  border-color: #2ecc71;
+  box-shadow: 0 4px 12px rgba(46, 204, 113, 0.2);
+}
+
+.toolbar-button.back-button {
+  background: rgba(52, 152, 219, 0.1);
+  border-color: rgba(52, 152, 219, 0.3);
+  color: #3498db;
+}
+
+.toolbar-button.back-button:hover {
+  background: rgba(52, 152, 219, 0.2);
+  border-color: #3498db;
+  box-shadow: 0 4px 12px rgba(52, 152, 219, 0.2);
+}
+
+.toolbar-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.toolbar-button .icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.toolbar-button .text {
+  font-size: 14px;
+  font-weight: 600;
+}
+
 /* Photo grid */
 .photo-grid {
   display: grid;
@@ -559,4 +655,114 @@ body {
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
     gap: 15px;
   }
+
+  .toolbar {
+    flex-direction: column;
+    gap: 15px;
+    padding: 15px;
+  }
+
+  .toolbar-left,
+  .toolbar-right {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .toolbar-button .text {
+    display: none;
+  }
+
+  .toolbar-button {
+    padding: 10px;
+    min-width: 44px;
+    justify-content: center;
+  }
+}
+
+/* Star/Shortlist Button Styles */
+.star-button {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(0, 0, 0, 0.7);
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #ffd700;
+  font-size: 16px;
+  transition: all 0.3s ease;
+  z-index: 2;
+  opacity: 0;
+}
+
+.photo-item:hover .star-button {
+  opacity: 1;
+}
+
+.star-button:hover {
+  background: rgba(0, 0, 0, 0.9);
+  transform: scale(1.1);
+}
+
+.star-button.starred {
+  opacity: 1;
+  background: rgba(255, 215, 0, 0.9);
+  color: #333;
+}
+
+.star-button.starred:hover {
+  background: rgba(255, 215, 0, 1);
+}
+
+.star-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+/* Preview Star Button */
+.star-preview-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  color: #ffd700;
+  margin-right: 10px;
+}
+
+.star-preview-btn:hover {
+  background: rgba(255, 215, 0, 0.2);
+  border-color: #ffd700;
+}
+
+.star-preview-btn.starred {
+  background: rgba(255, 215, 0, 0.9);
+  border-color: #ffd700;
+  color: #333;
+}
+
+.star-preview-btn.starred:hover {
+  background: rgba(255, 215, 0, 1);
+}
+
+.star-preview-btn .star-icon {
+  margin-right: 5px;
+}
+
+/* Ensure photo items have relative positioning for absolute star buttons */
+.photo-item {
+  position: relative;
+}
+
+/* Animation for starring */
+@keyframes starPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+.star-button.starred .star-icon {
+  animation: starPulse 0.3s ease-in-out;
 }
