@@ -114,6 +114,13 @@ class PhotoSelectorApp {
               this.mainWindow?.webContents.send('show-starred-photos');
             }
           },
+          {
+            label: 'Back to Home',
+            accelerator: 'CmdOrCtrl+H',
+            click: () => {
+              this.mainWindow?.webContents.send('go-back-home');
+            }
+          },
           { type: 'separator' },
           {
             label: 'Exit',

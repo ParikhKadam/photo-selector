@@ -22,6 +22,14 @@ class PhotoSelectorRenderer {
       });
     }
 
+    // Back to home button click handler
+    const backHomeBtn = document.getElementById('back-home-btn');
+    if (backHomeBtn) {
+      backHomeBtn.addEventListener('click', () => {
+        this.goBackToHome();
+      });
+    }
+
     // Filter starred button click handler
     const filterStarredBtn = document.getElementById('filter-starred-btn');
     if (filterStarredBtn) {
@@ -55,6 +63,11 @@ class PhotoSelectorRenderer {
       // Listen for show starred photos command
       window.electronAPI.onShowStarredPhotos(() => {
         this.showStarredPhotos();
+      });
+
+      // Listen for go back home command
+      window.electronAPI.onGoBackHome(() => {
+        this.goBackToHome();
       });
     }
   }
@@ -207,6 +220,14 @@ class PhotoSelectorRenderer {
           this.navigateImage(-1);
         } else if (e.key === 'ArrowRight') {
           this.navigateImage(1);
+        }
+      } else {
+        // Global keyboard shortcuts (when not in preview)
+        if (e.key === 'Escape') {
+          this.goBackToHome();
+        } else if (e.ctrlKey && e.key === 'h') {
+          e.preventDefault();
+          this.goBackToHome();
         }
       }
     });
@@ -873,6 +894,35 @@ class PhotoSelectorRenderer {
       const text = count > 0 ? `Export Starred (${count})` : 'Export Starred';
       exportBtn.innerHTML = `<span class="icon">📤</span><span class="text">${text}</span>`;
     }
+  }
+
+  goBackToHome() {
+    // Reset all state
+    this.currentMediaFiles = [];
+    this.allMediaFiles = [];
+    this.currentImageIndex = -1;
+    this.isViewingStarredPhotos = false;
+    this.isFilteringStarred = false;
+
+    // Hide toolbar and photo grid
+    const toolbar = document.getElementById('toolbar');
+    const photoGrid = document.getElementById('photo-grid');
+    const welcomeSection = document.querySelector('.welcome-section');
+
+    if (toolbar) {
+      toolbar.style.display = 'none';
+    }
+    
+    if (photoGrid) {
+      photoGrid.style.display = 'none';
+      photoGrid.innerHTML = '';
+    }
+    
+    if (welcomeSection) {
+      welcomeSection.style.display = 'flex';
+    }
+
+    console.log('Returned to home screen');
   }
 
   selectPhoto(photo) {

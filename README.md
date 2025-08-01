@@ -33,6 +33,7 @@ The application features a beautiful welcome screen and an intuitive photo grid 
 - **Filter Photos**: Use the "Show Starred Only" button in the toolbar to filter to starred photos
 - **Export Starred**: Use the "Export Starred" button to copy all starred photos to a folder
 - **View Starred Photos**: Use Ctrl+Shift+S or File menu to view all starred photos
+- **Back to Home**: Use the Home button, Escape key, Ctrl+H, or File menu to return to welcome screen
 
 ### Star/Shortlist Features
 - **Grid View Starring**: Hover over any photo to see the star button, click to star/unstar
@@ -58,8 +59,9 @@ The application features a beautiful welcome screen and an intuitive photo grid 
   - `←` / `→` Arrow keys to navigate between images
   - `F` key to toggle fullscreen mode
   - `S` key to star/unstar current image
-  - `ESC` key to close preview
+  - `ESC` key to close preview or return to home
   - `Ctrl+O` to open folder
+  - `Ctrl+H` to return to home screen
   - `Ctrl+Shift+S` to view starred photos
 - **Image Counter**: Shows current position (e.g., "3 of 12 images")
 

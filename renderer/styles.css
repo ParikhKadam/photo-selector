@@ -181,6 +181,18 @@ body {
   box-shadow: 0 4px 12px rgba(46, 204, 113, 0.2);
 }
 
+.toolbar-button.back-button {
+  background: rgba(52, 152, 219, 0.1);
+  border-color: rgba(52, 152, 219, 0.3);
+  color: #3498db;
+}
+
+.toolbar-button.back-button:hover {
+  background: rgba(52, 152, 219, 0.2);
+  border-color: #3498db;
+  box-shadow: 0 4px 12px rgba(52, 152, 219, 0.2);
+}
+
 .toolbar-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
