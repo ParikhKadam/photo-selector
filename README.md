@@ -7,14 +7,34 @@ A simple and elegant desktop application for browsing, selecting, and organizing
 ## Features
 
 - 🖼️ **Photo Browsing**: Browse photos from any folder on your computer
+- 🔍 **High-Quality Preview**: Double-click images for full-resolution preview with fullscreen mode
 - 🎨 **Modern UI**: Clean, modern interface with glassmorphism design
 - ⚡ **Fast Performance**: Built on Electron for native desktop performance
+- 🧭 **Image Navigation**: Navigate through images using arrow keys, mouse wheel, or navigation buttons
 - 🔒 **Secure**: Implements Electron security best practices
 - 📱 **Responsive**: Adapts to different window sizes
 
 ## Screenshots
 
 The application features a beautiful welcome screen and an intuitive photo grid view for browsing your images.
+
+## Usage
+
+### Basic Operations
+- **Open Folder**: Use Ctrl+O or File menu to select a photo folder
+- **View Thumbnails**: All images and videos in the folder will be displayed as thumbnails
+- **Select Images**: Click any thumbnail to select it
+- **Preview Images**: Double-click any image thumbnail to open full-resolution preview
+
+### Image Preview Navigation
+- **Mouse Navigation**: 
+  - Use navigation buttons (← →) on sides of preview
+  - Mouse wheel to scroll through images
+- **Keyboard Shortcuts**:
+  - `←` / `→` Arrow keys to navigate between images
+  - `F` key to toggle fullscreen mode
+  - `ESC` key to close preview
+- **Image Counter**: Shows current position (e.g., "3 of 12 images")
 
 ## Installation
 
