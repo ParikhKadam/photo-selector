@@ -270,7 +270,7 @@ class PhotoSelectorRenderer {
       }
     });
 
-    // Add mouse wheel navigation and zoom
+    // Add mouse wheel zoom (images only) - disable navigation via scroll to prevent conflicts
     modal.addEventListener('wheel', (e) => {
       if (modal.style.display === 'flex') {
         e.preventDefault();
@@ -278,23 +278,21 @@ class PhotoSelectorRenderer {
         const previewImage = document.getElementById('previewImage');
         const isImageVisible = previewImage && previewImage.style.display !== 'none';
         
-        // Check for pinch-to-zoom gesture or two-finger scroll on trackpad (only for images)
-        const isPinchZoom = (e.ctrlKey || Math.abs(e.deltaY) < 50) && isImageVisible;
-        
-        if (isPinchZoom) {
-          // Zoom with Mouse Wheel or trackpad pinch (images only)
-          if (e.deltaY < 0) {
-            this.zoomIn();
-          } else {
-            this.zoomOut();
+        // Only allow zoom for images, completely disable scroll navigation in preview
+        if (isImageVisible) {
+          // Check for pinch-to-zoom gesture or two-finger scroll on trackpad
+          const isPinchZoom = e.ctrlKey || Math.abs(e.deltaY) < 50;
+          
+          if (isPinchZoom) {
+            // Zoom with Mouse Wheel or trackpad pinch
+            if (e.deltaY < 0) {
+              this.zoomIn();
+            } else {
+              this.zoomOut();
+            }
           }
-        } else {
-          // Navigate media files with larger scroll movements
-          if (e.deltaY > 0) {
-            this.navigateImage(1); // Scroll down = next file
-          } else {
-            this.navigateImage(-1); // Scroll up = previous file
-          }
+          // Note: Removed navigation via scroll to prevent zoom/navigation conflicts
+          // Use arrow keys or navigation buttons instead
         }
       }
     });
