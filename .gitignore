@@ -80,7 +80,6 @@ out
 
 # Nuxt.js build / generate output
 .nuxt
-dist
 
 # Gatsby files
 .cache/
@@ -93,7 +92,6 @@ dist
 
 # vuepress v2.x temp and cache directory
 .temp
-.cache
 
 # Sveltekit cache directory
 .svelte-kit/
@@ -137,3 +135,57 @@ dist
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# ============================================
+# Electron & TypeScript Specific
+# ============================================
+
+# Compiled TypeScript output
+dist/
+
+# Electron distribution files
+release/
+*.AppImage
+*.dmg
+*.exe
+*.deb
+*.rpm
+*.snap
+
+# Electron builder cache
+.electron-builder-cache/
+
+# Electron debug logs
+electron-debug.log
+
+# Electron build configurations (keeping only the template)
+builder-effective-config.yaml
+builder-debug.yml
+latest-*.yml
+
+# OS specific files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# IDE specific files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Test directories and files
+test-*
+sample-*
+demo-*/
+test-mixed-folder/
+
+# Temporary files
+*.tmp
+*.temp

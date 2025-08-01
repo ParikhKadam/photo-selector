@@ -10,7 +10,9 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "pack": "electron-builder --dir",
     "dist": "electron-builder",
-    "clean": "rm -rf dist"
+    "dist:linux": "electron-builder --linux",
+    "dist:appimage": "electron-builder --linux AppImage",
+    "clean": "rm -rf dist release"
   },
   "keywords": [
     "electron",
@@ -19,8 +21,13 @@
     "typescript",
     "desktop"
   ],
-  "author": "",
+  "author": "Photo Selector Team",
   "license": "ISC",
+  "homepage": "https://github.com/ParikhKadam/photo-selector",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ParikhKadam/photo-selector.git"
+  },
   "devDependencies": {
     "@types/node": "^24.1.0",
     "electron": "^37.2.5",
@@ -31,5 +38,42 @@
   "dependencies": {
     "@types/sqlite3": "^3.1.11",
     "sqlite3": "^5.1.7"
+  },
+  "build": {
+    "appId": "com.photoSelector.app",
+    "productName": "Photo Selector",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "renderer/**/*",
+      "node_modules/**/*",
+      "!node_modules/*/{CHANGELOG.md,README.md,README,readme.md,readme}",
+      "!node_modules/*/{test,__tests__,tests,powered-test,example,examples}",
+      "!node_modules/*.d.ts",
+      "!node_modules/.bin",
+      "!**/*.{iml,o,hprof,orig,pyc,pyo,rbc,swp,csproj,sln,xproj}",
+      "!.editorconfig",
+      "!**/._*",
+      "!**/{.DS_Store,.git,.hg,.svn,CVS,RCS,SCCS,.gitignore,.gitattributes}",
+      "!**/{__pycache__,thumbs.db,.flowconfig,.idea,.vs,.nyc_output}",
+      "!**/{appveyor.yml,.travis.yml,circle.yml}",
+      "!**/{npm-debug.log,yarn.lock,.yarn-integrity,.yarn-metadata.json}"
+    ],
+    "linux": {
+      "icon": "build/icon.svg",
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": ["x64"]
+        }
+      ],
+      "category": "Graphics",
+      "description": "A simple and elegant photo selector application"
+    },
+    "appImage": {
+      "license": "LICENSE"
+    }
   }
 }

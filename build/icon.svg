@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="photoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4A90E2;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#7B68EE;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background circle -->
+  <circle cx="256" cy="256" r="240" fill="url(#photoGradient)" stroke="#2C3E50" stroke-width="8"/>
+  
+  <!-- Photo frame -->
+  <rect x="120" y="140" width="272" height="200" rx="12" ry="12" fill="#FFFFFF" stroke="#34495E" stroke-width="4"/>
+  <rect x="132" y="152" width="248" height="176" rx="8" ry="8" fill="#ECF0F1"/>
+  
+  <!-- Mountain/landscape icon -->
+  <polygon points="132,280 180,220 220,260 280,200 328,240 328,328 132,328" fill="#3498DB"/>
+  <polygon points="132,280 180,220 220,260 260,220 328,280 328,328 132,328" fill="#2980B9"/>
+  
+  <!-- Sun -->
+  <circle cx="300" cy="180" r="20" fill="#F39C12"/>
+  
+  <!-- Star icon (selector indicator) -->
+  <polygon points="256,80 270,108 298,108 276,126 282,154 256,140 230,154 236,126 214,108 242,108" fill="#F1C40F" stroke="#E67E22" stroke-width="2"/>
+  
+  <!-- Lens reflection -->
+  <ellipse cx="200" cy="200" rx="40" ry="25" fill="#FFFFFF" opacity="0.3"/>
+</svg>
