@@ -8,6 +8,17 @@ class PhotoSelectorRenderer {
     this.isViewingStarredPhotos = false; // Track if currently viewing starred photos
     this.isFilteringStarred = false; // Track if filtering to show only starred photos
     this.allMediaFiles = []; // Store all media files before filtering
+    
+    // Zoom and pan state
+    this.zoomLevel = 1;
+    this.minZoom = 0.1;
+    this.maxZoom = 5;
+    this.panX = 0;
+    this.panY = 0;
+    this.isDragging = false;
+    this.lastMouseX = 0;
+    this.lastMouseY = 0;
+    
     this.initializeEventListeners();
     this.createPreviewModal();
     this.loadStarredPhotosCache();
@@ -181,15 +192,29 @@ class PhotoSelectorRenderer {
           <span class="nav-icon">›</span>
         </button>
         <div class="preview-content">
-          <img id="previewImage" class="preview-image" alt="Preview">
+          <div class="zoom-container" id="zoomContainer">
+            <img id="previewImage" class="preview-image" alt="Preview">
+          </div>
           <div class="preview-info">
             <h3 id="previewTitle">Image Title</h3>
             <div class="preview-details">
               <span id="previewSize">Size: Loading...</span>
               <span id="previewType">Type: Loading...</span>
               <span id="previewIndex">1 of 1</span>
+              <span id="zoomLevel">Zoom: 100%</span>
             </div>
           </div>
+        </div>
+        <div class="zoom-controls">
+          <button onclick="photoRenderer.zoomIn()" class="zoom-btn" id="zoomInBtn" title="Zoom in (+)">
+            <span class="zoom-icon">+</span>
+          </button>
+          <button onclick="photoRenderer.zoomOut()" class="zoom-btn" id="zoomOutBtn" title="Zoom out (-)">
+            <span class="zoom-icon">−</span>
+          </button>
+          <button onclick="photoRenderer.resetZoom()" class="zoom-btn" id="zoomResetBtn" title="Reset zoom (0)">
+            <span class="zoom-icon">⌂</span>
+          </button>
         </div>
         <div class="preview-controls">
           <button onclick="photoRenderer.toggleCurrentImageStar()" class="preview-button star-preview-btn" id="previewStarButton" title="Add to starred photos">
@@ -220,6 +245,15 @@ class PhotoSelectorRenderer {
           this.navigateImage(-1);
         } else if (e.key === 'ArrowRight') {
           this.navigateImage(1);
+        } else if (e.key === '+' || e.key === '=') {
+          e.preventDefault();
+          this.zoomIn();
+        } else if (e.key === '-' || e.key === '_') {
+          e.preventDefault();
+          this.zoomOut();
+        } else if (e.key === '0') {
+          e.preventDefault();
+          this.resetZoom();
         }
       } else {
         // Global keyboard shortcuts (when not in preview)
@@ -232,17 +266,71 @@ class PhotoSelectorRenderer {
       }
     });
 
-    // Add mouse wheel navigation
+    // Add mouse wheel navigation and zoom
     modal.addEventListener('wheel', (e) => {
       if (modal.style.display === 'flex') {
         e.preventDefault();
-        if (e.deltaY > 0) {
-          this.navigateImage(1); // Scroll down = next image
+        
+        // Check for pinch-to-zoom gesture or two-finger scroll on trackpad
+        // On trackpad, deltaY will be smaller for zoom gestures
+        const isPinchZoom = e.ctrlKey || Math.abs(e.deltaY) < 50;
+        
+        if (isPinchZoom) {
+          // Zoom with Mouse Wheel or trackpad pinch
+          if (e.deltaY < 0) {
+            this.zoomIn();
+          } else {
+            this.zoomOut();
+          }
         } else {
-          this.navigateImage(-1); // Scroll up = previous image
+          // Navigate images with larger scroll movements
+          if (e.deltaY > 0) {
+            this.navigateImage(1); // Scroll down = next image
+          } else {
+            this.navigateImage(-1); // Scroll up = previous image
+          }
         }
       }
     });
+
+    // Add mouse drag support for panning when zoomed
+    const zoomContainer = modal.querySelector('#zoomContainer');
+    if (zoomContainer) {
+      zoomContainer.addEventListener('mousedown', (e) => {
+        if (this.zoomLevel > 1) {
+          this.isDragging = true;
+          this.lastMouseX = e.clientX;
+          this.lastMouseY = e.clientY;
+          zoomContainer.style.cursor = 'grabbing';
+          e.preventDefault();
+        }
+      });
+
+      document.addEventListener('mousemove', (e) => {
+        if (this.isDragging && this.zoomLevel > 1) {
+          const deltaX = e.clientX - this.lastMouseX;
+          const deltaY = e.clientY - this.lastMouseY;
+          
+          this.panX += deltaX;
+          this.panY += deltaY;
+          
+          this.lastMouseX = e.clientX;
+          this.lastMouseY = e.clientY;
+          
+          this.updateImageTransform();
+          e.preventDefault();
+        }
+      });
+
+      document.addEventListener('mouseup', () => {
+        if (this.isDragging) {
+          this.isDragging = false;
+          if (zoomContainer) {
+            zoomContainer.style.cursor = this.zoomLevel > 1 ? 'grab' : 'default';
+          }
+        }
+      });
+    }
   }
 
   async openPreview(file, index) {
@@ -290,6 +378,9 @@ class PhotoSelectorRenderer {
     
     // Show modal
     modal.style.display = 'flex';
+    
+    // Reset zoom state when opening new image
+    this.resetZoom();
     
     // Update navigation button states
     this.updateNavigationButtons();
@@ -933,6 +1024,65 @@ class PhotoSelectorRenderer {
     
     // Find and select the clicked item
     event.currentTarget.classList.add('selected');
+  }
+
+  zoomIn() {
+    if (this.zoomLevel < this.maxZoom) {
+      this.zoomLevel += 0.5;
+      this.updateImageTransform();
+      this.updateZoomControls();
+    }
+  }
+
+  zoomOut() {
+    if (this.zoomLevel > this.minZoom) {
+      this.zoomLevel -= 0.5;
+      this.updateImageTransform();
+      this.updateZoomControls();
+    }
+  }
+
+  resetZoom() {
+    this.zoomLevel = 1;
+    this.panX = 0;
+    this.panY = 0;
+    this.isDragging = false;
+    this.updateImageTransform();
+    this.updateZoomControls();
+  }
+
+  updateImageTransform() {
+    const previewImage = document.getElementById('previewImage');
+    const zoomContainer = document.getElementById('zoomContainer');
+    
+    if (previewImage) {
+      previewImage.style.transform = `scale(${this.zoomLevel}) translate(${this.panX / this.zoomLevel}px, ${this.panY / this.zoomLevel}px)`;
+      previewImage.style.transformOrigin = 'center center';
+    }
+    
+    if (zoomContainer) {
+      zoomContainer.style.cursor = this.zoomLevel > 1 ? 'grab' : 'default';
+    }
+  }
+
+  updateZoomControls() {
+    const zoomInBtn = document.getElementById('zoomInBtn');
+    const zoomOutBtn = document.getElementById('zoomOutBtn');
+    const zoomResetBtn = document.getElementById('zoomResetBtn');
+    const zoomLevelDisplay = document.getElementById('zoomLevel');
+    
+    if (zoomInBtn) {
+      zoomInBtn.disabled = this.zoomLevel >= this.maxZoom;
+    }
+    if (zoomOutBtn) {
+      zoomOutBtn.disabled = this.zoomLevel <= this.minZoom;
+    }
+    if (zoomResetBtn) {
+      zoomResetBtn.disabled = this.zoomLevel === 1 && this.panX === 0 && this.panY === 0;
+    }
+    if (zoomLevelDisplay) {
+      zoomLevelDisplay.textContent = `Zoom: ${Math.round(this.zoomLevel * 100)}%`;
+    }
   }
 }
 
