@@ -155,13 +155,7 @@ jobs:
           fi
         else
           echo "No specific release notes found, using fallback"
-          NOTES="# Photo Selector $VERSION
-
-## 🚀 Release Update
-
-This release includes performance improvements and enhanced user experience.
-
-For detailed information about all features and changes, please see the full documentation and previous release notes."
+          NOTES="# Photo Selector $VERSION - Performance improvements and enhanced user experience"
         fi
         
         # Save to file for GitHub release
