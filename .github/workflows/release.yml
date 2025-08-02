@@ -1,0 +1,169 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., v1.1.0)'
+        required: true
+        default: 'v1.1.0'
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        
+    steps:
+    - name: Check out Git repository
+      uses: actions/checkout@v4
+      
+    - name: Install Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Build TypeScript
+      run: npm run build
+      
+    - name: Build Electron app (Linux)
+      if: matrix.os == 'ubuntu-latest'
+      run: npm run dist:appimage
+      
+    - name: Build Electron app (Windows)
+      if: matrix.os == 'windows-latest'
+      run: npm run dist:win
+      
+    - name: Build Electron app (macOS)
+      if: matrix.os == 'macos-latest'
+      run: npm run dist:mac
+      env:
+        CSC_IDENTITY_AUTO_DISCOVERY: false
+        
+    - name: Upload Linux artifacts
+      if: matrix.os == 'ubuntu-latest'
+      uses: actions/upload-artifact@v4
+      with:
+        name: linux-build
+        path: |
+          release/*.AppImage
+          release/latest-linux.yml
+          
+    - name: Upload Windows artifacts
+      if: matrix.os == 'windows-latest'
+      uses: actions/upload-artifact@v4
+      with:
+        name: windows-build
+        path: |
+          release/*.exe
+          release/latest.yml
+          
+    - name: Upload macOS artifacts
+      if: matrix.os == 'macos-latest'
+      uses: actions/upload-artifact@v4
+      with:
+        name: macos-build
+        path: |
+          release/*.dmg
+          release/latest-mac.yml
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    
+    steps:
+    - name: Check out Git repository
+      uses: actions/checkout@v4
+      
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts
+        
+    - name: Display structure of downloaded files
+      run: ls -la artifacts/
+      
+    - name: Extract version from tag
+      id: version
+      run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+      
+    - name: Read release notes
+      id: release_notes
+      run: |
+        # Extract release notes for this version from RELEASE_NOTES.md
+        VERSION="${{ steps.version.outputs.VERSION }}"
+        VERSION_NUMBER=${VERSION#v}
+        
+        # Read the release notes section for this version
+        if grep -q "# Photo Selector $VERSION" RELEASE_NOTES.md; then
+          NOTES=$(sed -n "/# Photo Selector $VERSION/,/^# Photo Selector v/p" RELEASE_NOTES.md | sed '$d')
+        elif grep -q "# Photo Selector v$VERSION_NUMBER" RELEASE_NOTES.md; then
+          NOTES=$(sed -n "/# Photo Selector v$VERSION_NUMBER/,/^# Photo Selector v/p" RELEASE_NOTES.md | sed '$d')
+        else
+          NOTES="Release $VERSION - Performance improvements and enhanced user experience"
+        fi
+        
+        # Save to file for GitHub release
+        echo "$NOTES" > release_notes.md
+        
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ steps.version.outputs.VERSION }}
+        release_name: Photo Selector ${{ steps.version.outputs.VERSION }}
+        body_path: release_notes.md
+        draft: false
+        prerelease: false
+        
+    - name: Upload Linux AppImage
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: artifacts/linux-build/Photo Selector-${{ steps.version.outputs.VERSION#v }}.AppImage
+        asset_name: Photo.Selector-${{ steps.version.outputs.VERSION }}-linux-x64.AppImage
+        asset_content_type: application/octet-stream
+        
+    - name: Upload Windows Installer
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: artifacts/windows-build/Photo Selector Setup ${{ steps.version.outputs.VERSION#v }}.exe
+        asset_name: Photo.Selector-${{ steps.version.outputs.VERSION }}-windows-x64-setup.exe
+        asset_content_type: application/octet-stream
+        
+    - name: Upload Windows Portable
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: artifacts/windows-build/Photo Selector ${{ steps.version.outputs.VERSION#v }}.exe
+        asset_name: Photo.Selector-${{ steps.version.outputs.VERSION }}-windows-x64-portable.exe
+        asset_content_type: application/octet-stream
+        
+    - name: Upload macOS DMG
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: artifacts/macos-build/Photo Selector-${{ steps.version.outputs.VERSION#v }}.dmg
+        asset_name: Photo.Selector-${{ steps.version.outputs.VERSION }}-macos-x64.dmg
+        asset_content_type: application/octet-stream

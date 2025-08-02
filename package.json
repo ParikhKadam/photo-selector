@@ -15,6 +15,7 @@
     "dist:win": "electron-builder --win",
     "dist:win-portable": "electron-builder --win portable",
     "dist:win-nsis": "electron-builder --win nsis",
+    "dist:mac": "electron-builder --mac",
     "clean": "rm -rf dist release"
   },
   "keywords": [
@@ -88,6 +89,34 @@
         }
       ],
       "verifyUpdateCodeSignature": false
+    },
+    "mac": {
+      "icon": "build/icon.svg",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["x64", "arm64"]
+        }
+      ],
+      "category": "public.app-category.graphics-design",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": null,
+      "entitlementsInherit": null
+    },
+    "dmg": {
+      "contents": [
+        {
+          "x": 130,
+          "y": 220
+        },
+        {
+          "x": 410,
+          "y": 220,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
     },
     "nsis": {
       "oneClick": false,
