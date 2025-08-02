@@ -243,7 +243,7 @@ class PhotoSelectorRenderer {
       const modal = document.getElementById('imagePreviewModal');
       if (modal && modal.style.display === 'flex') {
         if (e.key === 'Escape') {
-          this.closePreview();
+          this.handleEscapeKey();
         } else if (e.key === 'f' || e.key === 'F') {
           this.toggleFullscreen();
         } else if (e.key === 's' || e.key === 'S') {
@@ -269,6 +269,27 @@ class PhotoSelectorRenderer {
         } else if (e.ctrlKey && e.key === 'h') {
           e.preventDefault();
           this.goBackToHome();
+        }
+      }
+    });
+
+    // Handle fullscreen changes (including F11 and Electron menu toggles)
+    document.addEventListener('fullscreenchange', () => {
+      const modal = document.getElementById('imagePreviewModal');
+      if (modal && modal.style.display === 'flex') {
+        const fullscreenBtn = modal.querySelector('.fullscreen-btn');
+        const fullscreenIcon = modal.querySelector('.fullscreen-icon');
+        
+        if (document.fullscreenElement) {
+          // Entered fullscreen
+          modal.classList.add('fullscreen-mode');
+          fullscreenIcon.textContent = '⛷';
+          fullscreenBtn.innerHTML = '<span class="fullscreen-icon">⛷</span>Exit Fullscreen';
+        } else {
+          // Exited fullscreen
+          modal.classList.remove('fullscreen-mode');
+          fullscreenIcon.textContent = '⛶';
+          fullscreenBtn.innerHTML = '<span class="fullscreen-icon">⛶</span>Fullscreen';
         }
       }
     });
@@ -470,6 +491,28 @@ class PhotoSelectorRenderer {
       previewImage.style.display = 'block';
       previewImage.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjBmMGYwIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxOCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkVycm9yIExvYWRpbmcgSW1hZ2U8L3RleHQ+PC9zdmc+';
       this.setZoomControlsVisibility(false);
+    }
+  }
+
+  handleEscapeKey() {
+    // Smart ESC handling: exit fullscreen first, then close preview
+    if (document.fullscreenElement) {
+      // If in fullscreen, exit fullscreen but stay in preview
+      document.exitFullscreen().then(() => {
+        const modal = document.getElementById('imagePreviewModal');
+        modal.classList.remove('fullscreen-mode');
+        
+        // Update fullscreen button UI
+        const fullscreenBtn = modal.querySelector('.fullscreen-btn');
+        const fullscreenIcon = modal.querySelector('.fullscreen-icon');
+        fullscreenIcon.textContent = '⛶';
+        fullscreenBtn.innerHTML = '<span class="fullscreen-icon">⛶</span>Fullscreen';
+      }).catch(err => {
+        console.error('Error exiting fullscreen:', err);
+      });
+    } else {
+      // If not in fullscreen, close the preview completely
+      this.closePreview();
     }
   }
 
