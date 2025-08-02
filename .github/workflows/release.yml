@@ -95,8 +95,10 @@ jobs:
       
     - name: Extract version from tag
       id: version
-      run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-      
+      run: |
+        echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        echo "VERSION_NUMBER=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+        
     - name: Read release notes
       id: release_notes
       run: |
@@ -134,7 +136,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: artifacts/linux-build/Photo Selector-${{ steps.version.outputs.VERSION#v }}.AppImage
+        asset_path: artifacts/linux-build/Photo Selector-${{ steps.version.outputs.VERSION_NUMBER }}.AppImage
         asset_name: Photo.Selector-${{ steps.version.outputs.VERSION }}-linux-x64.AppImage
         asset_content_type: application/octet-stream
         
@@ -144,7 +146,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: artifacts/windows-build/Photo Selector Setup ${{ steps.version.outputs.VERSION#v }}.exe
+        asset_path: artifacts/windows-build/Photo Selector Setup ${{ steps.version.outputs.VERSION_NUMBER }}.exe
         asset_name: Photo.Selector-${{ steps.version.outputs.VERSION }}-windows-x64-setup.exe
         asset_content_type: application/octet-stream
         
@@ -154,7 +156,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: artifacts/windows-build/Photo Selector ${{ steps.version.outputs.VERSION#v }}.exe
+        asset_path: artifacts/windows-build/Photo Selector ${{ steps.version.outputs.VERSION_NUMBER }}.exe
         asset_name: Photo.Selector-${{ steps.version.outputs.VERSION }}-windows-x64-portable.exe
         asset_content_type: application/octet-stream
         
@@ -164,6 +166,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: artifacts/macos-build/Photo Selector-${{ steps.version.outputs.VERSION#v }}.dmg
+        asset_path: artifacts/macos-build/Photo Selector-${{ steps.version.outputs.VERSION_NUMBER }}.dmg
         asset_name: Photo.Selector-${{ steps.version.outputs.VERSION }}-macos-x64.dmg
         asset_content_type: application/octet-stream
