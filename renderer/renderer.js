@@ -240,6 +240,14 @@ class PhotoSelectorRenderer {
           this.toggleFullscreen();
         } else if (e.key === 's' || e.key === 'S') {
           this.toggleCurrentImageStar();
+        } else if (e.ctrlKey && e.key === 'ArrowLeft') {
+          // Ctrl+Left: Skip backward 10 seconds (check BEFORE regular ArrowLeft)
+          e.preventDefault();
+          this.skipVideoBackward();
+        } else if (e.ctrlKey && e.key === 'ArrowRight') {
+          // Ctrl+Right: Skip forward 10 seconds (check BEFORE regular ArrowRight)
+          e.preventDefault();
+          this.skipVideoForward();
         } else if (e.key === 'ArrowLeft') {
           this.navigateImage(-1);
         } else if (e.key === 'ArrowRight') {
@@ -253,6 +261,10 @@ class PhotoSelectorRenderer {
         } else if (e.key === '0') {
           e.preventDefault();
           this.resetZoom();
+        } else if (e.key === ' ') {
+          // Spacebar: Toggle play/pause for videos
+          e.preventDefault();
+          this.toggleVideoPlayPause();
         }
       } else {
         // Global keyboard shortcuts (when not in preview)
@@ -594,6 +606,39 @@ class PhotoSelectorRenderer {
       }).catch(err => {
         console.error('Error exiting fullscreen:', err);
       });
+    }
+  }
+
+  toggleVideoPlayPause() {
+    const previewVideo = document.getElementById('previewVideo');
+    const isVideoVisible = previewVideo && previewVideo.style.display !== 'none';
+    
+    if (isVideoVisible) {
+      if (previewVideo.paused) {
+        previewVideo.play().catch(err => {
+          console.error('Error playing video:', err);
+        });
+      } else {
+        previewVideo.pause();
+      }
+    }
+  }
+
+  skipVideoBackward() {
+    const previewVideo = document.getElementById('previewVideo');
+    const isVideoVisible = previewVideo && previewVideo.style.display !== 'none';
+    
+    if (isVideoVisible) {
+      previewVideo.currentTime = Math.max(0, previewVideo.currentTime - 10);
+    }
+  }
+
+  skipVideoForward() {
+    const previewVideo = document.getElementById('previewVideo');
+    const isVideoVisible = previewVideo && previewVideo.style.display !== 'none';
+    
+    if (isVideoVisible) {
+      previewVideo.currentTime = Math.min(previewVideo.duration || 0, previewVideo.currentTime + 10);
     }
   }
 
