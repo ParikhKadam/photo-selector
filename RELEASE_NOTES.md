@@ -1,3 +1,37 @@
+# Photo Selector v1.1.0 Release Notes
+
+## 🚀 Performance & User Experience Update
+
+This release focuses on significant performance improvements and enhanced user experience with better keyboard controls and streamlined interface.
+
+### ✨ What's New in v1.1.0
+
+#### 🎯 Performance Improvements
+- **Smooth Touchpad Zoom**: Completely redesigned zoom handling for real-time touchpad responsiveness
+- **Optimized Event Processing**: Intelligent throttling prevents lag during zoom operations
+- **Hardware Acceleration**: GPU-accelerated CSS transforms for buttery smooth image scaling
+- **Smart Event Detection**: Automatic differentiation between touchpad and mouse wheel inputs
+
+#### ⌨️ Enhanced Keyboard Controls
+- **Smart ESC Handling**: ESC now exits fullscreen first, then closes preview (two-step behavior)
+- **Video Playback Shortcuts**: 
+  - Spacebar to toggle play/pause
+  - Ctrl+Left/Right arrows to skip backward/forward 10 seconds
+- **Fullscreen Sync**: All fullscreen toggles (F11, menu, F key) now sync UI properly
+
+#### 🎨 Interface Improvements  
+- **Streamlined Toolbar**: Removed redundant "Show All" button - "Starred Only" now works as intuitive toggle
+- **Visual Feedback**: Better button states and hover effects
+- **Cleaner Navigation**: Simplified toolbar with essential controls only
+
+#### 🐛 Bug Fixes
+- Fixed zoom lag issues that occurred after scroll conflict resolution
+- Fixed ESC key behavior in fullscreen mode
+- Fixed Ctrl+Arrow key conflicts with media navigation
+- Improved event handling order for better keyboard shortcut reliability
+
+---
+
 # Photo Selector v1.0.0 Release Notes
 
 ## 🎉 Initial Release - Photo and Video Management Made Simple

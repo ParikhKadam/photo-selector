@@ -19,6 +19,9 @@ class PhotoSelectorRenderer {
     this.lastMouseX = 0;
     this.lastMouseY = 0;
     
+    // Light throttling for wheel events
+    this.lastWheelTime = 0;
+    
     this.initializeEventListeners();
     this.createPreviewModal();
     this.loadStarredPhotosCache();
@@ -46,14 +49,6 @@ class PhotoSelectorRenderer {
     if (filterStarredBtn) {
       filterStarredBtn.addEventListener('click', () => {
         this.toggleStarredFilter();
-      });
-    }
-
-    // Show all button click handler
-    const showAllBtn = document.getElementById('show-all-btn');
-    if (showAllBtn) {
-      showAllBtn.addEventListener('click', () => {
-        this.showAllPhotos();
       });
     }
 
@@ -240,11 +235,19 @@ class PhotoSelectorRenderer {
       const modal = document.getElementById('imagePreviewModal');
       if (modal && modal.style.display === 'flex') {
         if (e.key === 'Escape') {
-          this.closePreview();
+          this.handleEscapeKey();
         } else if (e.key === 'f' || e.key === 'F') {
           this.toggleFullscreen();
         } else if (e.key === 's' || e.key === 'S') {
           this.toggleCurrentImageStar();
+        } else if (e.ctrlKey && e.key === 'ArrowLeft') {
+          // Ctrl+Left: Skip backward 10 seconds (check BEFORE regular ArrowLeft)
+          e.preventDefault();
+          this.skipVideoBackward();
+        } else if (e.ctrlKey && e.key === 'ArrowRight') {
+          // Ctrl+Right: Skip forward 10 seconds (check BEFORE regular ArrowRight)
+          e.preventDefault();
+          this.skipVideoForward();
         } else if (e.key === 'ArrowLeft') {
           this.navigateImage(-1);
         } else if (e.key === 'ArrowRight') {
@@ -258,6 +261,10 @@ class PhotoSelectorRenderer {
         } else if (e.key === '0') {
           e.preventDefault();
           this.resetZoom();
+        } else if (e.key === ' ') {
+          // Spacebar: Toggle play/pause for videos
+          e.preventDefault();
+          this.toggleVideoPlayPause();
         }
       } else {
         // Global keyboard shortcuts (when not in preview)
@@ -270,29 +277,66 @@ class PhotoSelectorRenderer {
       }
     });
 
-    // Add mouse wheel zoom (images only) - disable navigation via scroll to prevent conflicts
+    // Handle fullscreen changes (including F11 and Electron menu toggles)
+    document.addEventListener('fullscreenchange', () => {
+      const modal = document.getElementById('imagePreviewModal');
+      if (modal && modal.style.display === 'flex') {
+        const fullscreenBtn = modal.querySelector('.fullscreen-btn');
+        const fullscreenIcon = modal.querySelector('.fullscreen-icon');
+        
+        if (document.fullscreenElement) {
+          // Entered fullscreen
+          modal.classList.add('fullscreen-mode');
+          fullscreenIcon.textContent = '⛷';
+          fullscreenBtn.innerHTML = '<span class="fullscreen-icon">⛷</span>Exit Fullscreen';
+        } else {
+          // Exited fullscreen
+          modal.classList.remove('fullscreen-mode');
+          fullscreenIcon.textContent = '⛶';
+          fullscreenBtn.innerHTML = '<span class="fullscreen-icon">⛶</span>Fullscreen';
+        }
+      }
+    });
+
+    // Add mouse wheel zoom (images only) - optimized for touchpad responsiveness
     modal.addEventListener('wheel', (e) => {
       if (modal.style.display === 'flex') {
         e.preventDefault();
+        e.stopPropagation();
         
         const previewImage = document.getElementById('previewImage');
         const isImageVisible = previewImage && previewImage.style.display !== 'none';
         
-        // Only allow zoom for images, completely disable scroll navigation in preview
+        // Only allow zoom for images
         if (isImageVisible) {
-          // Check for pinch-to-zoom gesture or two-finger scroll on trackpad
-          const isPinchZoom = e.ctrlKey || Math.abs(e.deltaY) < 50;
+          const now = Date.now();
+          const timeDelta = now - this.lastWheelTime;
           
-          if (isPinchZoom) {
-            // Zoom with Mouse Wheel or trackpad pinch
+          // Light throttling only for excessive events (120fps max)
+          if (timeDelta < 8) {
+            return;
+          }
+          
+          this.lastWheelTime = now;
+          
+          // Detect touchpad vs mouse wheel
+          const isTouchpad = Math.abs(e.deltaY) < 50;
+          
+          if (isTouchpad) {
+            // For touchpad: immediate, smooth, smaller increments
+            if (e.deltaY < -2) {
+              this.smoothZoomIn();
+            } else if (e.deltaY > 2) {
+              this.smoothZoomOut();
+            }
+          } else {
+            // For mouse wheel: larger increments, less sensitive
             if (e.deltaY < 0) {
               this.zoomIn();
             } else {
               this.zoomOut();
             }
           }
-          // Note: Removed navigation via scroll to prevent zoom/navigation conflicts
-          // Use arrow keys or navigation buttons instead
         }
       }
     });
@@ -454,6 +498,28 @@ class PhotoSelectorRenderer {
     }
   }
 
+  handleEscapeKey() {
+    // Smart ESC handling: exit fullscreen first, then close preview
+    if (document.fullscreenElement) {
+      // If in fullscreen, exit fullscreen but stay in preview
+      document.exitFullscreen().then(() => {
+        const modal = document.getElementById('imagePreviewModal');
+        modal.classList.remove('fullscreen-mode');
+        
+        // Update fullscreen button UI
+        const fullscreenBtn = modal.querySelector('.fullscreen-btn');
+        const fullscreenIcon = modal.querySelector('.fullscreen-icon');
+        fullscreenIcon.textContent = '⛶';
+        fullscreenBtn.innerHTML = '<span class="fullscreen-icon">⛶</span>Fullscreen';
+      }).catch(err => {
+        console.error('Error exiting fullscreen:', err);
+      });
+    } else {
+      // If not in fullscreen, close the preview completely
+      this.closePreview();
+    }
+  }
+
   closePreview() {
     const modal = document.getElementById('imagePreviewModal');
     const previewImage = document.getElementById('previewImage');
@@ -540,6 +606,39 @@ class PhotoSelectorRenderer {
       }).catch(err => {
         console.error('Error exiting fullscreen:', err);
       });
+    }
+  }
+
+  toggleVideoPlayPause() {
+    const previewVideo = document.getElementById('previewVideo');
+    const isVideoVisible = previewVideo && previewVideo.style.display !== 'none';
+    
+    if (isVideoVisible) {
+      if (previewVideo.paused) {
+        previewVideo.play().catch(err => {
+          console.error('Error playing video:', err);
+        });
+      } else {
+        previewVideo.pause();
+      }
+    }
+  }
+
+  skipVideoBackward() {
+    const previewVideo = document.getElementById('previewVideo');
+    const isVideoVisible = previewVideo && previewVideo.style.display !== 'none';
+    
+    if (isVideoVisible) {
+      previewVideo.currentTime = Math.max(0, previewVideo.currentTime - 10);
+    }
+  }
+
+  skipVideoForward() {
+    const previewVideo = document.getElementById('previewVideo');
+    const isVideoVisible = previewVideo && previewVideo.style.display !== 'none';
+    
+    if (isVideoVisible) {
+      previewVideo.currentTime = Math.min(previewVideo.duration || 0, previewVideo.currentTime + 10);
     }
   }
 
@@ -921,30 +1020,26 @@ class PhotoSelectorRenderer {
 
   updateToolbarState() {
     const filterBtn = document.getElementById('filter-starred-btn');
-    const showAllBtn = document.getElementById('show-all-btn');
     
-    if (filterBtn && showAllBtn) {
+    if (filterBtn) {
       if (this.isViewingStarredPhotos) {
         // When viewing starred photos collection, disable filter button
         filterBtn.classList.remove('active');
         filterBtn.style.opacity = '0.5';
         filterBtn.style.pointerEvents = 'none';
         filterBtn.title = 'Filter not available in starred photos view';
-        showAllBtn.style.display = 'none';
       } else if (this.isFilteringStarred) {
         // When filtering starred photos in folder view
         filterBtn.classList.add('active');
         filterBtn.style.opacity = '1';
         filterBtn.style.pointerEvents = 'auto';
         filterBtn.title = 'Show only starred photos';
-        showAllBtn.style.display = 'flex';
       } else {
         // Normal folder view
         filterBtn.classList.remove('active');
         filterBtn.style.opacity = '1';
         filterBtn.style.pointerEvents = 'auto';
         filterBtn.title = 'Show only starred photos';
-        showAllBtn.style.display = 'none';
       }
     }
   }
@@ -1062,9 +1157,25 @@ class PhotoSelectorRenderer {
     event.currentTarget.classList.add('selected');
   }
 
+  smoothZoomIn() {
+    if (this.zoomLevel < this.maxZoom) {
+      this.zoomLevel += 0.1; // Very small increments for touchpad
+      this.updateImageTransform();
+      this.updateZoomControls();
+    }
+  }
+
+  smoothZoomOut() {
+    if (this.zoomLevel > this.minZoom) {
+      this.zoomLevel -= 0.1; // Very small increments for touchpad
+      this.updateImageTransform();
+      this.updateZoomControls();
+    }
+  }
+
   zoomIn() {
     if (this.zoomLevel < this.maxZoom) {
-      this.zoomLevel += 0.5;
+      this.zoomLevel += 0.25; // Smaller increments for smoother zooming
       this.updateImageTransform();
       this.updateZoomControls();
     }
@@ -1072,7 +1183,7 @@ class PhotoSelectorRenderer {
 
   zoomOut() {
     if (this.zoomLevel > this.minZoom) {
-      this.zoomLevel -= 0.5;
+      this.zoomLevel -= 0.25; // Smaller increments for smoother zooming
       this.updateImageTransform();
       this.updateZoomControls();
     }
@@ -1094,8 +1205,11 @@ class PhotoSelectorRenderer {
     
     // Only apply zoom to images, not videos
     if (previewImage && previewImage.style.display !== 'none') {
-      previewImage.style.transform = `scale(${this.zoomLevel}) translate(${this.panX / this.zoomLevel}px, ${this.panY / this.zoomLevel}px)`;
-      previewImage.style.transformOrigin = 'center center';
+      // Use requestAnimationFrame for smooth rendering
+      requestAnimationFrame(() => {
+        previewImage.style.transform = `scale(${this.zoomLevel}) translate(${this.panX / this.zoomLevel}px, ${this.panY / this.zoomLevel}px)`;
+        previewImage.style.transformOrigin = 'center center';
+      });
     }
     
     if (zoomContainer) {
