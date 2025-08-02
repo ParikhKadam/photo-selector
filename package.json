@@ -1,6 +1,6 @@
 {
   "name": "photo-selector",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "A simple and elegant photo selector application built with Electron and TypeScript",
   "main": "dist/main.js",
   "scripts": {
