@@ -52,14 +52,6 @@ class PhotoSelectorRenderer {
       });
     }
 
-    // Show all button click handler
-    const showAllBtn = document.getElementById('show-all-btn');
-    if (showAllBtn) {
-      showAllBtn.addEventListener('click', () => {
-        this.showAllPhotos();
-      });
-    }
-
     // Export starred button click handler
     const exportStarredBtn = document.getElementById('export-starred-btn');
     if (exportStarredBtn) {
@@ -983,30 +975,26 @@ class PhotoSelectorRenderer {
 
   updateToolbarState() {
     const filterBtn = document.getElementById('filter-starred-btn');
-    const showAllBtn = document.getElementById('show-all-btn');
     
-    if (filterBtn && showAllBtn) {
+    if (filterBtn) {
       if (this.isViewingStarredPhotos) {
         // When viewing starred photos collection, disable filter button
         filterBtn.classList.remove('active');
         filterBtn.style.opacity = '0.5';
         filterBtn.style.pointerEvents = 'none';
         filterBtn.title = 'Filter not available in starred photos view';
-        showAllBtn.style.display = 'none';
       } else if (this.isFilteringStarred) {
         // When filtering starred photos in folder view
         filterBtn.classList.add('active');
         filterBtn.style.opacity = '1';
         filterBtn.style.pointerEvents = 'auto';
         filterBtn.title = 'Show only starred photos';
-        showAllBtn.style.display = 'flex';
       } else {
         // Normal folder view
         filterBtn.classList.remove('active');
         filterBtn.style.opacity = '1';
         filterBtn.style.pointerEvents = 'auto';
         filterBtn.title = 'Show only starred photos';
-        showAllBtn.style.display = 'none';
       }
     }
   }
