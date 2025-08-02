@@ -116,21 +116,61 @@ jobs:
     - name: Read release notes
       id: release_notes
       run: |
-        # Extract release notes for this version from RELEASE_NOTES.md
         VERSION="${{ steps.version.outputs.VERSION }}"
-        VERSION_NUMBER=${VERSION#v}
+        VERSION_NUMBER="${{ steps.version.outputs.VERSION_NUMBER }}"
         
-        # Read the release notes section for this version
-        if grep -q "# Photo Selector $VERSION" RELEASE_NOTES.md; then
-          NOTES=$(sed -n "/# Photo Selector $VERSION/,/^# Photo Selector v/p" RELEASE_NOTES.md | sed '$d')
-        elif grep -q "# Photo Selector v$VERSION_NUMBER" RELEASE_NOTES.md; then
-          NOTES=$(sed -n "/# Photo Selector v$VERSION_NUMBER/,/^# Photo Selector v/p" RELEASE_NOTES.md | sed '$d')
+        echo "Looking for release notes for version: $VERSION or $VERSION_NUMBER"
+        
+        # Find the line numbers for all release sections
+        SECTION_LINES=$(grep -n "^# Photo Selector" RELEASE_NOTES.md | cut -d: -f1)
+        echo "Found release sections at lines: $SECTION_LINES"
+        
+        # Try to find the specific version section
+        START_LINE=""
+        if grep -q "^# Photo Selector $VERSION" RELEASE_NOTES.md; then
+          START_LINE=$(grep -n "^# Photo Selector $VERSION" RELEASE_NOTES.md | cut -d: -f1)
+          echo "Found exact match for $VERSION at line $START_LINE"
+        elif grep -q "^# Photo Selector v$VERSION_NUMBER" RELEASE_NOTES.md; then
+          START_LINE=$(grep -n "^# Photo Selector v$VERSION_NUMBER" RELEASE_NOTES.md | cut -d: -f1)
+          echo "Found match for v$VERSION_NUMBER at line $START_LINE"
+        fi
+        
+        if [ -n "$START_LINE" ]; then
+          # Find the next section line number
+          NEXT_LINE=$(grep -n "^# Photo Selector" RELEASE_NOTES.md | cut -d: -f1 | awk "/^$START_LINE\$/{getline; print; exit}")
+          
+          if [ -n "$NEXT_LINE" ]; then
+            # Extract from start line to line before next section
+            END_LINE=$((NEXT_LINE - 1))
+            # Remove trailing separator lines (---)
+            while [ $END_LINE -gt $START_LINE ] && [ -z "$(sed -n "${END_LINE}p" RELEASE_NOTES.md | tr -d '[:space:]-')" ]; do
+              END_LINE=$((END_LINE - 1))
+            done
+            NOTES=$(sed -n "${START_LINE},${END_LINE}p" RELEASE_NOTES.md)
+            echo "Extracted notes from lines $START_LINE to $END_LINE (next section at $NEXT_LINE)"
+          else
+            # This is the last section
+            NOTES=$(sed -n "${START_LINE},\$p" RELEASE_NOTES.md)
+            echo "Extracted notes from line $START_LINE to end of file"
+          fi
         else
-          NOTES="Release $VERSION - Performance improvements and enhanced user experience"
+          echo "No specific release notes found, using fallback"
+          NOTES="# Photo Selector $VERSION
+
+## 🚀 Release Update
+
+This release includes performance improvements and enhanced user experience.
+
+For detailed information about all features and changes, please see the full documentation and previous release notes."
         fi
         
         # Save to file for GitHub release
         echo "$NOTES" > release_notes.md
+        
+        echo "Generated release notes:"
+        echo "========================"
+        cat release_notes.md
+        echo "========================"
         
     - name: Create Release
       id: create_release

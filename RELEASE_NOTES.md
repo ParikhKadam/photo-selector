@@ -1,3 +1,32 @@
+# Photo Selector v1.1.1 Release Notes
+
+## 🎯 Cross-Platform Release & Build System
+
+This release introduces a comprehensive automated build system for cross-platform distribution, enabling Windows and macOS support alongside Linux.
+
+### ✨ What's New in v1.1.1
+
+#### 🏗️ Cross-Platform Build System
+- **GitHub Actions Automation**: Fully automated cross-platform builds for Linux, Windows, and macOS
+- **Professional Release Management**: Unified releases with properly named assets across all platforms
+- **Windows Support**: Both NSIS installer and portable executables
+- **macOS Support**: Universal DMG packages for Intel and Apple Silicon Macs
+- **Linux AppImage**: Continued support with automated building
+
+#### 📦 Distribution Improvements
+- **Standardized Naming**: Consistent asset naming across all platforms
+- **Release Automation**: One-click releases triggered by git tags
+- **Build Matrix**: Simultaneous builds on multiple platforms for faster releases
+- **Asset Management**: Automated upload and organization of release files
+
+#### 🔧 Technical Enhancements
+- **electron-builder Optimization**: Refined configuration for better cross-platform compatibility
+- **Version Synchronization**: Dynamic version management from git tags
+- **Build Performance**: Optimized build process with parallel execution
+- **Security**: Enhanced GitHub Actions permissions and token management
+
+---
+
 # Photo Selector v1.1.0 Release Notes
 
 ## 🚀 Performance & User Experience Update
