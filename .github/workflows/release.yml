@@ -98,7 +98,14 @@ jobs:
         path: artifacts
         
     - name: Display structure of downloaded files
-      run: ls -la artifacts/
+      run: |
+        ls -la artifacts/
+        echo "=== Linux artifacts ==="
+        ls -la artifacts/linux-build/ || echo "No linux-build directory"
+        echo "=== Windows artifacts ==="
+        ls -la artifacts/windows-build/ || echo "No windows-build directory"
+        echo "=== macOS artifacts ==="
+        ls -la artifacts/macos-build/ || echo "No macos-build directory"
       
     - name: Extract version from tag
       id: version
