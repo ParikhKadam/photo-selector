@@ -19,6 +19,9 @@ class PhotoSelectorRenderer {
     this.lastMouseX = 0;
     this.lastMouseY = 0;
     
+    // Light throttling for wheel events
+    this.lastWheelTime = 0;
+    
     this.initializeEventListeners();
     this.createPreviewModal();
     this.loadStarredPhotosCache();
@@ -270,29 +273,45 @@ class PhotoSelectorRenderer {
       }
     });
 
-    // Add mouse wheel zoom (images only) - disable navigation via scroll to prevent conflicts
+    // Add mouse wheel zoom (images only) - optimized for touchpad responsiveness
     modal.addEventListener('wheel', (e) => {
       if (modal.style.display === 'flex') {
         e.preventDefault();
+        e.stopPropagation();
         
         const previewImage = document.getElementById('previewImage');
         const isImageVisible = previewImage && previewImage.style.display !== 'none';
         
-        // Only allow zoom for images, completely disable scroll navigation in preview
+        // Only allow zoom for images
         if (isImageVisible) {
-          // Check for pinch-to-zoom gesture or two-finger scroll on trackpad
-          const isPinchZoom = e.ctrlKey || Math.abs(e.deltaY) < 50;
+          const now = Date.now();
+          const timeDelta = now - this.lastWheelTime;
           
-          if (isPinchZoom) {
-            // Zoom with Mouse Wheel or trackpad pinch
+          // Light throttling only for excessive events (120fps max)
+          if (timeDelta < 8) {
+            return;
+          }
+          
+          this.lastWheelTime = now;
+          
+          // Detect touchpad vs mouse wheel
+          const isTouchpad = Math.abs(e.deltaY) < 50;
+          
+          if (isTouchpad) {
+            // For touchpad: immediate, smooth, smaller increments
+            if (e.deltaY < -2) {
+              this.smoothZoomIn();
+            } else if (e.deltaY > 2) {
+              this.smoothZoomOut();
+            }
+          } else {
+            // For mouse wheel: larger increments, less sensitive
             if (e.deltaY < 0) {
               this.zoomIn();
             } else {
               this.zoomOut();
             }
           }
-          // Note: Removed navigation via scroll to prevent zoom/navigation conflicts
-          // Use arrow keys or navigation buttons instead
         }
       }
     });
@@ -1062,9 +1081,25 @@ class PhotoSelectorRenderer {
     event.currentTarget.classList.add('selected');
   }
 
+  smoothZoomIn() {
+    if (this.zoomLevel < this.maxZoom) {
+      this.zoomLevel += 0.1; // Very small increments for touchpad
+      this.updateImageTransform();
+      this.updateZoomControls();
+    }
+  }
+
+  smoothZoomOut() {
+    if (this.zoomLevel > this.minZoom) {
+      this.zoomLevel -= 0.1; // Very small increments for touchpad
+      this.updateImageTransform();
+      this.updateZoomControls();
+    }
+  }
+
   zoomIn() {
     if (this.zoomLevel < this.maxZoom) {
-      this.zoomLevel += 0.5;
+      this.zoomLevel += 0.25; // Smaller increments for smoother zooming
       this.updateImageTransform();
       this.updateZoomControls();
     }
@@ -1072,7 +1107,7 @@ class PhotoSelectorRenderer {
 
   zoomOut() {
     if (this.zoomLevel > this.minZoom) {
-      this.zoomLevel -= 0.5;
+      this.zoomLevel -= 0.25; // Smaller increments for smoother zooming
       this.updateImageTransform();
       this.updateZoomControls();
     }
@@ -1094,8 +1129,11 @@ class PhotoSelectorRenderer {
     
     // Only apply zoom to images, not videos
     if (previewImage && previewImage.style.display !== 'none') {
-      previewImage.style.transform = `scale(${this.zoomLevel}) translate(${this.panX / this.zoomLevel}px, ${this.panY / this.zoomLevel}px)`;
-      previewImage.style.transformOrigin = 'center center';
+      // Use requestAnimationFrame for smooth rendering
+      requestAnimationFrame(() => {
+        previewImage.style.transform = `scale(${this.zoomLevel}) translate(${this.panX / this.zoomLevel}px, ${this.panY / this.zoomLevel}px)`;
+        previewImage.style.transformOrigin = 'center center';
+      });
     }
     
     if (zoomContainer) {

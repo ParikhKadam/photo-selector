@@ -445,8 +445,17 @@ body {
   border-radius: 8px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
   opacity: 0;
-  transition: opacity 0.3s ease, transform 0.2s ease;
+  /* Optimized transitions for better performance */
+  transition: opacity 0.3s ease, transform 0.1s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   transform-origin: center center;
+  /* Enable hardware acceleration */
+  transform: translate3d(0, 0, 0);
+  will-change: transform, opacity;
+  cursor: grab;
+}
+
+.preview-image:active {
+  cursor: grabbing;
 }
 
 .preview-video {
@@ -498,6 +507,9 @@ body {
   cursor: default;
   background: rgba(0, 0, 0, 0.1);
   border-radius: 8px;
+  /* Enable hardware acceleration */
+  transform: translate3d(0, 0, 0);
+  will-change: contents;
 }
 
 .zoom-container.dragging {

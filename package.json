@@ -12,6 +12,9 @@
     "dist": "electron-builder",
     "dist:linux": "electron-builder --linux",
     "dist:appimage": "electron-builder --linux AppImage",
+    "dist:win": "electron-builder --win",
+    "dist:win-portable": "electron-builder --win portable",
+    "dist:win-nsis": "electron-builder --win nsis",
     "clean": "rm -rf dist release"
   },
   "keywords": [
@@ -71,6 +74,29 @@
       ],
       "category": "Graphics",
       "description": "A simple and elegant photo selector application"
+    },
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ],
+      "verifyUpdateCodeSignature": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "deleteAppDataOnUninstall": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Photo Selector"
     },
     "appImage": {
       "license": "LICENSE"
