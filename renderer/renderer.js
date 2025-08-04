@@ -179,13 +179,18 @@ class PhotoSelectorRenderer {
     modal.innerHTML = `
       <div class="preview-backdrop" onclick="photoRenderer.closePreview()"></div>
       <div class="preview-container">
-        <button class="preview-close" onclick="photoRenderer.closePreview()">&times;</button>
+        <!-- Close button -->
+        <button class="preview-close" onclick="photoRenderer.closePreview()" title="Close (ESC)">&times;</button>
+        
+        <!-- Navigation buttons -->
         <button class="nav-button nav-prev" onclick="photoRenderer.navigateImage(-1)" title="Previous image (←)">
           <span class="nav-icon">‹</span>
         </button>
         <button class="nav-button nav-next" onclick="photoRenderer.navigateImage(1)" title="Next image (→)">
           <span class="nav-icon">›</span>
         </button>
+
+        <!-- Main content -->
         <div class="preview-content">
           <div class="zoom-container" id="zoomContainer">
             <img id="previewImage" class="preview-image" alt="Preview" style="display: none;">
@@ -194,41 +199,72 @@ class PhotoSelectorRenderer {
               Your browser does not support the video element.
             </video>
           </div>
-          <div class="preview-info">
-            <h3 id="previewTitle">Image Title</h3>
-            <div class="preview-details">
-              <span id="previewSize">Size: Loading...</span>
-              <span id="previewType">Type: Loading...</span>
+        </div>
+
+        <!-- Bottom info bar (preview mode only) -->
+        <div class="preview-info-bar">
+          <div class="preview-file-info">
+            <h3 id="previewTitle" class="preview-filename">Image Title</h3>
+            <div class="preview-meta">
               <span id="previewIndex">1 of 1</span>
-              <span id="zoomLevel">Zoom: 100%</span>
+              <span id="zoomLevel">100%</span>
+            </div>
+          </div>
+          <div class="preview-actions">
+            <button onclick="photoRenderer.toggleCurrentImageStar()" class="action-btn star-btn" id="previewStarButton" title="Star photo (S)">
+              <span class="star-icon">★</span>
+            </button>
+            <div class="zoom-controls">
+              <button onclick="photoRenderer.zoomOut()" class="action-btn zoom-btn" id="zoomOutBtn" title="Zoom out (-)">−</button>
+              <button onclick="photoRenderer.zoomIn()" class="action-btn zoom-btn" id="zoomInBtn" title="Zoom in (+)">+</button>
+              <button onclick="photoRenderer.resetZoom()" class="action-btn zoom-btn" id="zoomResetBtn" title="Reset zoom (0)">⌂</button>
+            </div>
+            <button onclick="photoRenderer.toggleFullscreen()" class="action-btn fullscreen-btn" title="Enter fullscreen (F)">
+              <span class="fullscreen-icon">⛶</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Fullscreen overlay controls (only visible in fullscreen) -->
+        <div class="fullscreen-overlay-controls">
+          <div class="fullscreen-top-bar">
+            <div class="fullscreen-info">
+              <span id="fullscreenTitle" class="fullscreen-filename">Image Title</span>
+              <span id="fullscreenIndex" class="fullscreen-counter">1 of 1</span>
+            </div>
+            <button class="fullscreen-close" onclick="photoRenderer.closePreview()" title="Close (ESC)">&times;</button>
+          </div>
+          
+          <div class="fullscreen-bottom-bar">
+            <div class="fullscreen-actions">
+              <button onclick="photoRenderer.toggleCurrentImageStar()" class="fullscreen-btn star-btn-fs" id="previewStarButtonFS" title="Star photo (S)">
+                <span class="star-icon">★</span>
+              </button>
+              <div class="fullscreen-zoom-controls">
+                <button onclick="photoRenderer.zoomOut()" class="fullscreen-btn zoom-btn-fs" title="Zoom out (-)">−</button>
+                <span id="zoomLevelFS" class="zoom-display-fs">100%</span>
+                <button onclick="photoRenderer.zoomIn()" class="fullscreen-btn zoom-btn-fs" title="Zoom in (+)">+</button>
+                <button onclick="photoRenderer.resetZoom()" class="fullscreen-btn zoom-btn-fs" title="Reset zoom (0)">⌂</button>
+              </div>
+              <button onclick="photoRenderer.toggleFullscreen()" class="fullscreen-btn exit-fullscreen-btn" title="Exit fullscreen (F)">
+                <span class="fullscreen-icon">⛷</span>
+              </button>
             </div>
           </div>
         </div>
-        <div class="zoom-controls">
-          <button onclick="photoRenderer.zoomIn()" class="zoom-btn" id="zoomInBtn" title="Zoom in (+)">
-            <span class="zoom-icon">+</span>
-          </button>
-          <button onclick="photoRenderer.zoomOut()" class="zoom-btn" id="zoomOutBtn" title="Zoom out (-)">
-            <span class="zoom-icon">−</span>
-          </button>
-          <button onclick="photoRenderer.resetZoom()" class="zoom-btn" id="zoomResetBtn" title="Reset zoom (0)">
-            <span class="zoom-icon">⌂</span>
-          </button>
-        </div>
-        <div class="preview-controls">
-          <button onclick="photoRenderer.toggleCurrentImageStar()" class="preview-button star-preview-btn" id="previewStarButton" title="Add to starred photos">
-            <span class="star-icon">★</span>
-            <span class="star-text">Star</span>
-          </button>
-          <button onclick="photoRenderer.toggleFullscreen()" class="preview-button fullscreen-btn">
-            <span class="fullscreen-icon">⛶</span>
-            Fullscreen
-          </button>
+
+        <!-- Hidden elements for compatibility -->
+        <div style="display: none;">
+          <span id="previewSize">Size: Loading...</span>
+          <span id="previewType">Type: Loading...</span>
         </div>
       </div>
     `;
     
     document.body.appendChild(modal);
+    
+    // Initialize fullscreen controls
+    this.initializeFullscreenControls(modal);
     
     // Add keyboard and mouse event listeners
     document.addEventListener('keydown', (e) => {
@@ -426,9 +462,21 @@ class PhotoSelectorRenderer {
     previewSize.textContent = `Size: ${this.formatFileSize(currentFile.size)}`;
     previewType.textContent = `Type: ${currentFile.type.toUpperCase()}`;
     
+    // Also update fullscreen title
+    const fullscreenTitle = document.getElementById('fullscreenTitle');
+    if (fullscreenTitle) {
+      fullscreenTitle.textContent = currentFile.name;
+    }
+    
     // Update index display (count all media files)
     const currentMediaPosition = this.currentMediaFiles.findIndex(f => f.path === currentFile.path) + 1;
     previewIndex.textContent = `${currentMediaPosition} of ${this.currentMediaFiles.length}`;
+    
+    // Also update fullscreen index
+    const fullscreenIndex = document.getElementById('fullscreenIndex');
+    if (fullscreenIndex) {
+      fullscreenIndex.textContent = `${currentMediaPosition} of ${this.currentMediaFiles.length}`;
+    }
     
     // Hide both elements initially
     previewImage.style.display = 'none';
@@ -525,6 +573,12 @@ class PhotoSelectorRenderer {
     const previewImage = document.getElementById('previewImage');
     const previewVideo = document.getElementById('previewVideo');
     
+    // Clear fullscreen control timer
+    if (this.fullscreenHideTimeout) {
+      clearTimeout(this.fullscreenHideTimeout);
+      this.fullscreenHideTimeout = null;
+    }
+    
     // Exit fullscreen if active
     if (document.fullscreenElement) {
       document.exitFullscreen();
@@ -585,15 +639,12 @@ class PhotoSelectorRenderer {
   toggleFullscreen() {
     const modal = document.getElementById('imagePreviewModal');
     const container = modal.querySelector('.preview-container');
-    const fullscreenBtn = modal.querySelector('.fullscreen-btn');
-    const fullscreenIcon = modal.querySelector('.fullscreen-icon');
     
     if (!document.fullscreenElement) {
       // Enter fullscreen
       container.requestFullscreen().then(() => {
         modal.classList.add('fullscreen-mode');
-        fullscreenIcon.textContent = '⛷';
-        fullscreenBtn.innerHTML = '<span class="fullscreen-icon">⛷</span>Exit Fullscreen';
+        this.updateFullscreenButton(true);
       }).catch(err => {
         console.error('Error entering fullscreen:', err);
       });
@@ -601,8 +652,7 @@ class PhotoSelectorRenderer {
       // Exit fullscreen
       document.exitFullscreen().then(() => {
         modal.classList.remove('fullscreen-mode');
-        fullscreenIcon.textContent = '⛶';
-        fullscreenBtn.innerHTML = '<span class="fullscreen-icon">⛶</span>Fullscreen';
+        this.updateFullscreenButton(false);
       }).catch(err => {
         console.error('Error exiting fullscreen:', err);
       });
@@ -917,22 +967,9 @@ class PhotoSelectorRenderer {
     }
 
     const currentFile = this.currentMediaFiles[this.currentImageIndex];
-    const previewStarButton = document.getElementById('previewStarButton');
     const isStarred = this.starredPhotosCache.has(currentFile.path);
     
-    if (previewStarButton) {
-      const starText = previewStarButton.querySelector('.star-text');
-      
-      if (isStarred) {
-        previewStarButton.classList.add('starred');
-        previewStarButton.title = 'Remove from starred photos (S)';
-        if (starText) starText.textContent = 'Unstar';
-      } else {
-        previewStarButton.classList.remove('starred');
-        previewStarButton.title = 'Add to starred photos (S)';
-        if (starText) starText.textContent = 'Star';
-      }
-    }
+    this.updateStarButton(isStarred);
   }
 
   // Filter and Export functionality
@@ -1266,6 +1303,182 @@ class PhotoSelectorRenderer {
     if (zoomLevelDisplay) {
       zoomLevelDisplay.style.display = visible ? 'inline' : 'none';
     }
+  }
+
+  // Fullscreen controls functionality
+  initializeFullscreenControls(modal) {
+    this.fullscreenControlsVisible = false;
+    this.fullscreenHideTimeout = null;
+    this.lastMouseMove = Date.now();
+    
+    // Get fullscreen overlay controls
+    this.fullscreenOverlay = modal.querySelector('.fullscreen-overlay-controls');
+    
+    // Mouse movement handler for fullscreen only
+    const handleMouseMove = (e) => {
+      if (document.fullscreenElement) {
+        this.lastMouseMove = Date.now();
+        this.showFullscreenControls();
+        this.resetFullscreenHideTimer();
+      }
+    };
+
+    // Mouse leave handler for fullscreen
+    const handleMouseLeave = () => {
+      if (document.fullscreenElement) {
+        this.resetFullscreenHideTimer(1000); // Hide faster when mouse leaves
+      }
+    };
+
+    // Attach event listeners
+    modal.addEventListener('mousemove', handleMouseMove);
+    modal.addEventListener('mouseleave', handleMouseLeave);
+    
+    // Add fullscreen change listener
+    document.addEventListener('fullscreenchange', () => {
+      const modalElement = document.getElementById('imagePreviewModal');
+      if (modalElement && modalElement.style.display === 'flex') {
+        const isFullscreen = !!document.fullscreenElement;
+        if (isFullscreen) {
+          modalElement.classList.add('fullscreen-mode');
+          this.hideFullscreenControls(); // Start hidden in fullscreen
+          this.syncFullscreenData(); // Sync data to fullscreen elements
+        } else {
+          modalElement.classList.remove('fullscreen-mode');
+          this.showFullscreenControls(); // Reset controls when exiting fullscreen
+        }
+        this.updateFullscreenButton(isFullscreen);
+      }
+    });
+  }
+
+  showFullscreenControls() {
+    if (!this.fullscreenControlsVisible && document.fullscreenElement) {
+      this.fullscreenControlsVisible = true;
+      if (this.fullscreenOverlay) {
+        this.fullscreenOverlay.classList.add('fullscreen-controls-visible');
+        this.fullscreenOverlay.classList.remove('fullscreen-controls-hidden');
+      }
+    }
+  }
+
+  hideFullscreenControls() {
+    if (this.fullscreenControlsVisible) {
+      this.fullscreenControlsVisible = false;
+      if (this.fullscreenOverlay) {
+        this.fullscreenOverlay.classList.add('fullscreen-controls-hidden');
+        this.fullscreenOverlay.classList.remove('fullscreen-controls-visible');
+      }
+    }
+  }
+
+  resetFullscreenHideTimer(delay = 3000) {
+    if (!document.fullscreenElement) return;
+    
+    // Clear existing timeout
+    if (this.fullscreenHideTimeout) {
+      clearTimeout(this.fullscreenHideTimeout);
+    }
+    
+    // Set new timeout
+    this.fullscreenHideTimeout = setTimeout(() => {
+      // Check if mouse has been idle and we're still in fullscreen
+      const timeSinceLastMove = Date.now() - this.lastMouseMove;
+      if (timeSinceLastMove >= delay - 100 && document.fullscreenElement) {
+        this.hideFullscreenControls();
+      }
+    }, delay);
+  }
+
+  // Sync data between preview and fullscreen elements
+  syncFullscreenData() {
+    // Sync filename
+    const previewTitle = document.getElementById('previewTitle');
+    const fullscreenTitle = document.getElementById('fullscreenTitle');
+    if (previewTitle && fullscreenTitle) {
+      fullscreenTitle.textContent = previewTitle.textContent;
+    }
+
+    // Sync index
+    const previewIndex = document.getElementById('previewIndex');
+    const fullscreenIndex = document.getElementById('fullscreenIndex');
+    if (previewIndex && fullscreenIndex) {
+      fullscreenIndex.textContent = previewIndex.textContent;
+    }
+
+    // Sync zoom level
+    const zoomLevel = document.getElementById('zoomLevel');
+    const zoomLevelFS = document.getElementById('zoomLevelFS');
+    if (zoomLevel && zoomLevelFS) {
+      zoomLevelFS.textContent = zoomLevel.textContent;
+    }
+
+    // Sync star status
+    const starBtn = document.getElementById('previewStarButton');
+    const starBtnFS = document.getElementById('previewStarButtonFS');
+    if (starBtn && starBtnFS) {
+      starBtnFS.className = starBtn.className.replace('star-btn', 'star-btn-fs');
+    }
+  }
+
+  // Update existing methods to work with new structure
+  updateStarButton(isStarred) {
+    // Update preview star button
+    const starButton = document.getElementById('previewStarButton');
+    const starIcon = starButton?.querySelector('.star-icon');
+    
+    if (starButton && starIcon) {
+      if (isStarred) {
+        starButton.classList.add('starred');
+        starButton.title = 'Remove from starred photos (S)';
+        starIcon.style.color = '#f39c12';
+      } else {
+        starButton.classList.remove('starred');
+        starButton.title = 'Star photo (S)';
+        starIcon.style.color = '';
+      }
+    }
+
+    // Update fullscreen star button
+    const starButtonFS = document.getElementById('previewStarButtonFS');
+    const starIconFS = starButtonFS?.querySelector('.star-icon');
+    
+    if (starButtonFS && starIconFS) {
+      if (isStarred) {
+        starButtonFS.classList.add('starred');
+        starButtonFS.title = 'Remove from starred photos (S)';
+        starIconFS.style.color = '#f39c12';
+      } else {
+        starButtonFS.classList.remove('starred');
+        starButtonFS.title = 'Star photo (S)';
+        starIconFS.style.color = '';
+      }
+    }
+  }
+
+  updateFullscreenButton(isFullscreen) {
+    const fullscreenBtn = document.querySelector('.fullscreen-btn');
+    const fullscreenIcon = document.querySelector('.fullscreen-icon');
+    
+    if (fullscreenBtn && fullscreenIcon) {
+      if (isFullscreen) {
+        fullscreenIcon.textContent = '⛷';
+        fullscreenBtn.title = 'Exit fullscreen (F)';
+      } else {
+        fullscreenIcon.textContent = '⛶';
+        fullscreenBtn.title = 'Enter fullscreen (F)';
+      }
+    }
+  }
+
+  // Override zoom level updates to sync both displays
+  updateZoomDisplay() {
+    const zoomLevel = document.getElementById('zoomLevel');
+    const zoomLevelFS = document.getElementById('zoomLevelFS');
+    const zoomPercentage = Math.round(this.currentZoom * 100) + '%';
+    
+    if (zoomLevel) zoomLevel.textContent = zoomPercentage;
+    if (zoomLevelFS) zoomLevelFS.textContent = zoomPercentage;
   }
 }
 
