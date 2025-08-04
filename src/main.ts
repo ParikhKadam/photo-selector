@@ -2,13 +2,16 @@ import { app, BrowserWindow, Menu, ipcMain, dialog } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
 import { DatabaseManager, StarredPhoto } from './database';
+import { ThumbnailService } from './thumbnail';
 
 class PhotoSelectorApp {
   private mainWindow: BrowserWindow | null = null;
   private dbManager: DatabaseManager;
+  private thumbnailService: ThumbnailService;
 
   constructor() {
     this.dbManager = new DatabaseManager();
+    this.thumbnailService = new ThumbnailService();
     this.init();
   }
 
@@ -201,6 +204,22 @@ class PhotoSelectorApp {
       }
     });
 
+    // Handle getting files from a folder with pagination
+    ipcMain.handle('folder:getMediaFilesPaginated', async (event, folderPath: string, offset: number = 0, limit: number = 50) => {
+      try {
+        const allFiles = await this.getMediaFiles(folderPath);
+        const paginatedFiles = allFiles.slice(offset, offset + limit);
+        return {
+          files: paginatedFiles,
+          total: allFiles.length,
+          hasMore: offset + limit < allFiles.length
+        };
+      } catch (error) {
+        console.error('Error reading folder:', error);
+        return { files: [], total: 0, hasMore: false };
+      }
+    });
+
     // Handle image preview
     ipcMain.handle('image:getPreview', async (event, filePath: string) => {
       try {
@@ -213,6 +232,39 @@ class PhotoSelectorApp {
         };
       } catch (error) {
         console.error('Error getting image preview:', error);
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        };
+      }
+    });
+
+    // Handle thumbnail generation
+    ipcMain.handle('image:getThumbnail', async (event, filePath: string) => {
+      try {
+        const result = await this.thumbnailService.getThumbnail(filePath);
+        return result;
+      } catch (error) {
+        console.error('Error generating thumbnail:', error);
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        };
+      }
+    });
+
+    // Handle batch thumbnail generation
+    ipcMain.handle('image:getThumbnails', async (event, filePaths: string[]) => {
+      try {
+        const results = await this.thumbnailService.getThumbnails(filePaths);
+        // Convert Map to object for IPC transfer
+        const resultsObj: { [key: string]: any } = {};
+        results.forEach((value, key) => {
+          resultsObj[key] = value;
+        });
+        return { success: true, thumbnails: resultsObj };
+      } catch (error) {
+        console.error('Error generating batch thumbnails:', error);
         return {
           success: false,
           error: error instanceof Error ? error.message : 'Unknown error'
@@ -330,6 +382,20 @@ class PhotoSelectorApp {
         return { success: true, results };
       } catch (error) {
         console.error('Error exporting starred photos:', error);
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        };
+      }
+    });
+
+    // Handle thumbnail cache cleanup
+    ipcMain.handle('thumbnail:cleanup', async () => {
+      try {
+        await this.thumbnailService.cleanupCache();
+        return { success: true };
+      } catch (error) {
+        console.error('Error cleaning up thumbnail cache:', error);
         return {
           success: false,
           error: error instanceof Error ? error.message : 'Unknown error'
