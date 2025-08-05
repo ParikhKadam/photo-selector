@@ -172,215 +172,188 @@ class PhotoSelectorRenderer {
   }
 
   createPreviewModal() {
-    // Create modal HTML structure
+    // Create clean, simple modal structure
     const modal = document.createElement('div');
     modal.id = 'imagePreviewModal';
     modal.className = 'preview-modal';
+    modal.setAttribute('tabindex', '0'); // Make modal focusable
+    modal.style.outline = 'none'; // Remove focus outline
     modal.innerHTML = `
       <div class="preview-backdrop" onclick="photoRenderer.closePreview()"></div>
       <div class="preview-container">
         <!-- Close button -->
         <button class="preview-close" onclick="photoRenderer.closePreview()" title="Close (ESC)">&times;</button>
         
-        <!-- Navigation buttons -->
-        <button class="nav-button nav-prev" onclick="photoRenderer.navigateImage(-1)" title="Previous image (←)">
-          <span class="nav-icon">‹</span>
-        </button>
-        <button class="nav-button nav-next" onclick="photoRenderer.navigateImage(1)" title="Next image (→)">
-          <span class="nav-icon">›</span>
-        </button>
+        <!-- Navigation arrows -->
+        <button class="nav-arrow nav-prev" onclick="photoRenderer.navigateImage(-1)" title="Previous (←) | Ctrl+← to skip back 10s in video">‹</button>
+        <button class="nav-arrow nav-next" onclick="photoRenderer.navigateImage(1)" title="Next (→) | Ctrl+→ to skip forward 10s in video">›</button>
 
-        <!-- Main content -->
-        <div class="preview-content">
-          <div class="zoom-container" id="zoomContainer">
-            <img id="previewImage" class="preview-image" alt="Preview" style="display: none;">
-            <video id="previewVideo" class="preview-video" controls preload="metadata" style="display: none;">
-              <source id="videoSource" src="" type="">
-              Your browser does not support the video element.
-            </video>
-          </div>
+        <!-- Main image/video area -->
+        <div class="preview-media">
+          <img id="previewImage" class="preview-image" alt="Preview" style="display: none;">
+          <video id="previewVideo" class="preview-video" controls preload="metadata" style="display: none;">
+            Your browser does not support the video element.
+          </video>
         </div>
 
-        <!-- Bottom info bar (preview mode only) -->
-        <div class="preview-info-bar">
-          <div class="preview-file-info">
-            <h3 id="previewTitle" class="preview-filename">Image Title</h3>
-            <div class="preview-meta">
-              <span id="previewIndex">1 of 1</span>
-              <span id="zoomLevel">100%</span>
-            </div>
+        <!-- Bottom control bar -->
+        <div class="preview-controls">
+          <div class="preview-info">
+            <span id="previewTitle" class="preview-title">Image Title</span>
+            <span id="previewIndex" class="preview-counter">1 of 1</span>
           </div>
           <div class="preview-actions">
-            <button onclick="photoRenderer.toggleCurrentImageStar()" class="action-btn star-btn" id="previewStarButton" title="Star photo (S)">
-              <span class="star-icon">★</span>
-            </button>
-            <div class="zoom-controls">
-              <button onclick="photoRenderer.zoomOut()" class="action-btn zoom-btn" id="zoomOutBtn" title="Zoom out (-)">−</button>
-              <button onclick="photoRenderer.zoomIn()" class="action-btn zoom-btn" id="zoomInBtn" title="Zoom in (+)">+</button>
-              <button onclick="photoRenderer.resetZoom()" class="action-btn zoom-btn" id="zoomResetBtn" title="Reset zoom (0)">⌂</button>
+            <button onclick="photoRenderer.toggleCurrentImageStar()" class="control-btn star-btn" id="previewStarButton" title="Star photo (S)">★</button>
+            <div class="zoom-controls" id="zoomControls">
+              <button onclick="photoRenderer.zoomOut()" class="control-btn" title="Zoom out (-)">−</button>
+              <span id="zoomLevel" class="zoom-display">100%</span>
+              <button onclick="photoRenderer.zoomIn()" class="control-btn" title="Zoom in (+)">+</button>
+              <button onclick="photoRenderer.resetZoom()" class="control-btn" title="Reset zoom (0)">⌂</button>
             </div>
-            <button onclick="photoRenderer.toggleFullscreen()" class="action-btn fullscreen-btn" title="Enter fullscreen (F)">
-              <span class="fullscreen-icon">⛶</span>
-            </button>
+            <button onclick="photoRenderer.toggleFullscreen()" class="control-btn fullscreen-btn" title="Fullscreen (F)">⛶</button>
           </div>
-        </div>
-
-        <!-- Fullscreen overlay controls (only visible in fullscreen) -->
-        <div class="fullscreen-overlay-controls">
-          <div class="fullscreen-top-bar">
-            <div class="fullscreen-info">
-              <span id="fullscreenTitle" class="fullscreen-filename">Image Title</span>
-              <span id="fullscreenIndex" class="fullscreen-counter">1 of 1</span>
-            </div>
-            <button class="fullscreen-close" onclick="photoRenderer.closePreview()" title="Close (ESC)">&times;</button>
-          </div>
-          
-          <div class="fullscreen-bottom-bar">
-            <div class="fullscreen-actions">
-              <button onclick="photoRenderer.toggleCurrentImageStar()" class="fullscreen-btn star-btn-fs" id="previewStarButtonFS" title="Star photo (S)">
-                <span class="star-icon">★</span>
-              </button>
-              <div class="fullscreen-zoom-controls">
-                <button onclick="photoRenderer.zoomOut()" class="fullscreen-btn zoom-btn-fs" title="Zoom out (-)">−</button>
-                <span id="zoomLevelFS" class="zoom-display-fs">100%</span>
-                <button onclick="photoRenderer.zoomIn()" class="fullscreen-btn zoom-btn-fs" title="Zoom in (+)">+</button>
-                <button onclick="photoRenderer.resetZoom()" class="fullscreen-btn zoom-btn-fs" title="Reset zoom (0)">⌂</button>
-              </div>
-              <button onclick="photoRenderer.toggleFullscreen()" class="fullscreen-btn exit-fullscreen-btn" title="Exit fullscreen (F)">
-                <span class="fullscreen-icon">⛷</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Hidden elements for compatibility -->
-        <div style="display: none;">
-          <span id="previewSize">Size: Loading...</span>
-          <span id="previewType">Type: Loading...</span>
         </div>
       </div>
     `;
     
     document.body.appendChild(modal);
-    
-    // Initialize fullscreen controls
-    this.initializeFullscreenControls(modal);
-    
-    // Add keyboard and mouse event listeners
+    this.setupPreviewEventListeners(modal);
+  }
+
+  setupPreviewEventListeners(modal) {
+    // Keyboard shortcuts - use capture phase to intercept before video controls
     document.addEventListener('keydown', (e) => {
       const modal = document.getElementById('imagePreviewModal');
       if (modal && modal.style.display === 'flex') {
-        if (e.key === 'Escape') {
-          this.handleEscapeKey();
-        } else if (e.key === 'f' || e.key === 'F') {
-          this.toggleFullscreen();
-        } else if (e.key === 's' || e.key === 'S') {
-          this.toggleCurrentImageStar();
-        } else if (e.ctrlKey && e.key === 'ArrowLeft') {
-          // Ctrl+Left: Skip backward 10 seconds (check BEFORE regular ArrowLeft)
-          e.preventDefault();
-          this.skipVideoBackward();
-        } else if (e.ctrlKey && e.key === 'ArrowRight') {
-          // Ctrl+Right: Skip forward 10 seconds (check BEFORE regular ArrowRight)
-          e.preventDefault();
-          this.skipVideoForward();
-        } else if (e.key === 'ArrowLeft') {
-          this.navigateImage(-1);
-        } else if (e.key === 'ArrowRight') {
-          this.navigateImage(1);
-        } else if (e.key === '+' || e.key === '=') {
-          e.preventDefault();
-          this.zoomIn();
-        } else if (e.key === '-' || e.key === '_') {
-          e.preventDefault();
-          this.zoomOut();
-        } else if (e.key === '0') {
-          e.preventDefault();
-          this.resetZoom();
-        } else if (e.key === ' ') {
-          // Spacebar: Toggle play/pause for videos
-          e.preventDefault();
-          this.toggleVideoPlayPause();
-        }
-      } else {
-        // Global keyboard shortcuts (when not in preview)
-        if (e.key === 'Escape') {
-          this.goBackToHome();
-        } else if (e.ctrlKey && e.key === 'h') {
-          e.preventDefault();
-          this.goBackToHome();
-        }
-      }
-    });
-
-    // Handle fullscreen changes (including F11 and Electron menu toggles)
-    document.addEventListener('fullscreenchange', () => {
-      const modal = document.getElementById('imagePreviewModal');
-      if (modal && modal.style.display === 'flex') {
-        const fullscreenBtn = modal.querySelector('.fullscreen-btn');
-        const fullscreenIcon = modal.querySelector('.fullscreen-icon');
         
-        if (document.fullscreenElement) {
-          // Entered fullscreen
-          modal.classList.add('fullscreen-mode');
-          fullscreenIcon.textContent = '⛷';
-          fullscreenBtn.innerHTML = '<span class="fullscreen-icon">⛷</span>Exit Fullscreen';
-        } else {
-          // Exited fullscreen
-          modal.classList.remove('fullscreen-mode');
-          fullscreenIcon.textContent = '⛶';
-          fullscreenBtn.innerHTML = '<span class="fullscreen-icon">⛶</span>Fullscreen';
+        // Handle Ctrl+Arrow keys for video seeking (10 seconds)
+        if (e.ctrlKey && !e.altKey && !e.metaKey && !e.shiftKey) {
+          switch(e.key) {
+            case 'ArrowLeft':
+              this.skipVideoBackward();
+              e.preventDefault();
+              e.stopPropagation();
+              return;
+            case 'ArrowRight':
+              this.skipVideoForward();
+              e.preventDefault();
+              e.stopPropagation();
+              return;
+          }
         }
+        
+        // Check if any modifier keys are pressed - if so, don't intercept other keys
+        if (e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) {
+          return;
+        }
+        
+        switch(e.key) {
+          case 'Escape':
+            if (document.fullscreenElement) {
+              document.exitFullscreen();
+            } else {
+              this.closePreview();
+            }
+            e.preventDefault();
+            e.stopPropagation();
+            break;
+          case 'f':
+          case 'F':
+            this.toggleFullscreen();
+            e.preventDefault();
+            e.stopPropagation();
+            break;
+          case 's':
+          case 'S':
+            this.toggleCurrentImageStar();
+            e.preventDefault();
+            e.stopPropagation();
+            break;
+          case 'ArrowLeft':
+            this.navigateImage(-1);
+            e.preventDefault();
+            e.stopPropagation();
+            break;
+          case 'ArrowRight':
+            this.navigateImage(1);
+            e.preventDefault();
+            e.stopPropagation();
+            break;
+          case '+':
+          case '=':
+            e.preventDefault();
+            e.stopPropagation();
+            this.zoomIn();
+            break;
+          case '-':
+          case '_':
+            e.preventDefault();
+            e.stopPropagation();
+            this.zoomOut();
+            break;
+          case '0':
+            e.preventDefault();
+            e.stopPropagation();
+            this.resetZoom();
+            break;
+          case ' ':
+            // Always handle spacebar for video play/pause
+            e.preventDefault();
+            e.stopPropagation();
+            this.toggleVideoPlayPause();
+            break;
+        }
+      }
+    }, true); // Use capture phase to intercept before video controls
+
+    // Additional keyup handler to prevent double space bar triggering
+    document.addEventListener('keyup', (e) => {
+      const modal = document.getElementById('imagePreviewModal');
+      if (modal && modal.style.display === 'flex' && e.key === ' ') {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    }, true); // Use capture phase
+
+    // Focus management for video elements
+    modal.addEventListener('click', (e) => {
+      // When clicking anywhere in the modal, ensure focus stays on modal
+      if (modal.style.display === 'flex') {
+        modal.focus();
       }
     });
 
-    // Add mouse wheel zoom (images only) - optimized for touchpad responsiveness
+    // Prevent video controls from stealing keyboard focus
+    modal.addEventListener('focusin', (e) => {
+      if (e.target.tagName === 'VIDEO') {
+        // If video gets focus, redirect focus to modal container
+        setTimeout(() => {
+          modal.focus();
+        }, 0);
+      }
+    });
+
+    // Mouse wheel zoom for images
     modal.addEventListener('wheel', (e) => {
       if (modal.style.display === 'flex') {
         e.preventDefault();
-        e.stopPropagation();
-        
         const previewImage = document.getElementById('previewImage');
         const isImageVisible = previewImage && previewImage.style.display !== 'none';
         
-        // Only allow zoom for images
         if (isImageVisible) {
-          const now = Date.now();
-          const timeDelta = now - this.lastWheelTime;
-          
-          // Light throttling only for excessive events (120fps max)
-          if (timeDelta < 8) {
-            return;
-          }
-          
-          this.lastWheelTime = now;
-          
-          // Detect touchpad vs mouse wheel
-          const isTouchpad = Math.abs(e.deltaY) < 50;
-          
-          if (isTouchpad) {
-            // For touchpad: immediate, smooth, smaller increments
-            if (e.deltaY < -2) {
-              this.smoothZoomIn();
-            } else if (e.deltaY > 2) {
-              this.smoothZoomOut();
-            }
+          if (e.deltaY < 0) {
+            this.zoomIn();
           } else {
-            // For mouse wheel: larger increments, less sensitive
-            if (e.deltaY < 0) {
-              this.zoomIn();
-            } else {
-              this.zoomOut();
-            }
+            this.zoomOut();
           }
         }
       }
     });
 
-    // Add mouse drag support for panning when zoomed on images
-    const zoomContainer = modal.querySelector('#zoomContainer');
-    if (zoomContainer) {
-      zoomContainer.addEventListener('mousedown', (e) => {
+    // Mouse drag for panning
+    const previewMedia = modal.querySelector('.preview-media');
+    if (previewMedia) {
+      previewMedia.addEventListener('mousedown', (e) => {
         const previewImage = document.getElementById('previewImage');
         const isImageVisible = previewImage && previewImage.style.display !== 'none';
         
@@ -388,7 +361,7 @@ class PhotoSelectorRenderer {
           this.isDragging = true;
           this.lastMouseX = e.clientX;
           this.lastMouseY = e.clientY;
-          zoomContainer.style.cursor = 'grabbing';
+          previewMedia.style.cursor = 'grabbing';
           e.preventDefault();
         }
       });
@@ -412,14 +385,28 @@ class PhotoSelectorRenderer {
       document.addEventListener('mouseup', () => {
         if (this.isDragging) {
           this.isDragging = false;
-          if (zoomContainer) {
-            const previewImage = document.getElementById('previewImage');
-            const isImageVisible = previewImage && previewImage.style.display !== 'none';
-            zoomContainer.style.cursor = (this.zoomLevel > 1 && isImageVisible) ? 'grab' : 'default';
-          }
+          previewMedia.style.cursor = this.zoomLevel > 1 ? 'grab' : 'default';
         }
       });
     }
+
+    // Fullscreen change handler
+    document.addEventListener('fullscreenchange', () => {
+      const modal = document.getElementById('imagePreviewModal');
+      if (modal && modal.style.display === 'flex') {
+        const fullscreenBtn = modal.querySelector('.fullscreen-btn');
+        
+        if (document.fullscreenElement) {
+          modal.classList.add('fullscreen-mode');
+          fullscreenBtn.textContent = '⛷';
+          fullscreenBtn.title = 'Exit fullscreen (F)';
+        } else {
+          modal.classList.remove('fullscreen-mode');
+          fullscreenBtn.textContent = '⛶';
+          fullscreenBtn.title = 'Fullscreen (F)';
+        }
+      }
+    });
   }
 
   async openPreview(file, index) {
@@ -432,108 +419,77 @@ class PhotoSelectorRenderer {
       return;
     }
 
-    // Display the media file at the given index (image or video)
     this.currentImageIndex = index;
     const currentFile = this.currentMediaFiles[index];
     
     const modal = document.getElementById('imagePreviewModal');
     const previewImage = document.getElementById('previewImage');
     const previewVideo = document.getElementById('previewVideo');
-    const videoSource = document.getElementById('videoSource');
     const previewTitle = document.getElementById('previewTitle');
-    const previewSize = document.getElementById('previewSize');
-    const previewType = document.getElementById('previewType');
     const previewIndex = document.getElementById('previewIndex');
     
     // Show modal
     modal.style.display = 'flex';
     
-    // Reset zoom state when opening new media
+    // Ensure modal can receive focus
+    modal.setAttribute('tabindex', '0');
+    modal.focus();
+    
+    // Reset zoom and pan
     this.resetZoom();
     
-    // Update navigation button states
+    // Update UI
     this.updateNavigationButtons();
-    
-    // Update star button state
     this.updatePreviewStarButton();
     
-    // Set file information
+    // Set file info
     previewTitle.textContent = currentFile.name;
-    previewSize.textContent = `Size: ${this.formatFileSize(currentFile.size)}`;
-    previewType.textContent = `Type: ${currentFile.type.toUpperCase()}`;
+    previewIndex.textContent = `${index + 1} of ${this.currentMediaFiles.length}`;
     
-    // Also update fullscreen title
-    const fullscreenTitle = document.getElementById('fullscreenTitle');
-    if (fullscreenTitle) {
-      fullscreenTitle.textContent = currentFile.name;
-    }
-    
-    // Update index display (count all media files)
-    const currentMediaPosition = this.currentMediaFiles.findIndex(f => f.path === currentFile.path) + 1;
-    previewIndex.textContent = `${currentMediaPosition} of ${this.currentMediaFiles.length}`;
-    
-    // Also update fullscreen index
-    const fullscreenIndex = document.getElementById('fullscreenIndex');
-    if (fullscreenIndex) {
-      fullscreenIndex.textContent = `${currentMediaPosition} of ${this.currentMediaFiles.length}`;
-    }
-    
-    // Hide both elements initially
+    // Hide both media elements initially
     previewImage.style.display = 'none';
     previewVideo.style.display = 'none';
     
     try {
-      // Get media preview
       const result = await window.electronAPI.getImagePreview(currentFile.path);
       
       if (result.success && result.exists) {
         if (currentFile.type === 'video') {
-          // Handle video files
+          // Show video
           previewVideo.src = `file://${result.filePath}`;
-          
-          // Remove any poster to prevent gray overlay
-          previewVideo.removeAttribute('poster');
-          
-          // Add event listeners to handle video loading states
-          previewVideo.onloadstart = () => {
-            previewVideo.style.opacity = '0.7';
-          };
-          
-          previewVideo.oncanplay = () => {
-            previewVideo.style.opacity = '1';
-          };
-          
-          previewVideo.onloadeddata = () => {
-            previewVideo.style.opacity = '1';
-          };
-          
-          previewVideo.onerror = () => {
-            previewVideo.style.opacity = '0.5';
-            console.error('Error loading video:', currentFile.path);
-          };
-          
-          previewVideo.load(); // Reload the video element
           previewVideo.style.display = 'block';
-          previewVideo.style.opacity = '1';
-          
-          // Disable zoom controls for videos
+          previewVideo.load();
           this.setZoomControlsVisibility(false);
+          
+          // Add video-specific event handlers to prevent conflicts
+          previewVideo.addEventListener('keydown', (e) => {
+            // Prevent video from handling our custom shortcuts, but allow Ctrl+Arrow for seeking
+            if (e.ctrlKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+              // Let our handlers deal with Ctrl+Arrow for video seeking
+              return;
+            }
+            // Prevent video from handling other custom shortcuts
+            if (['ArrowLeft', 'ArrowRight', 'f', 'F', 's', 'S', ' ', 'Escape'].includes(e.key)) {
+              e.preventDefault();
+              e.stopPropagation();
+            }
+          }, true);
+          
+          // Ensure focus returns to modal after video interaction
+          previewVideo.addEventListener('click', () => {
+            setTimeout(() => {
+              modal.focus();
+            }, 10);
+          });
+          
         } else {
-          // Handle image files
+          // Show image  
           previewImage.src = `file://${result.filePath}`;
           previewImage.style.display = 'block';
-          previewImage.onload = () => {
-            previewImage.style.opacity = '1';
-          };
-          previewImage.onerror = () => {
-            previewImage.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjBmMGYwIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxOCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkVycm9yIExvYWRpbmcgSW1hZ2U8L3RleHQ+PC9zdmc+';
-          };
-          
-          // Enable zoom controls for images
           this.setZoomControlsVisibility(true);
         }
       } else {
-        // Show error state
+        // Show error
         previewImage.style.display = 'block';
         previewImage.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjBmMGYwIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxOCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkZpbGUgTm90IEZvdW5kPC90ZXh0Pjwvc3ZnPic=';
         this.setZoomControlsVisibility(false);
@@ -546,38 +502,10 @@ class PhotoSelectorRenderer {
     }
   }
 
-  handleEscapeKey() {
-    // Smart ESC handling: exit fullscreen first, then close preview
-    if (document.fullscreenElement) {
-      // If in fullscreen, exit fullscreen but stay in preview
-      document.exitFullscreen().then(() => {
-        const modal = document.getElementById('imagePreviewModal');
-        modal.classList.remove('fullscreen-mode');
-        
-        // Update fullscreen button UI
-        const fullscreenBtn = modal.querySelector('.fullscreen-btn');
-        const fullscreenIcon = modal.querySelector('.fullscreen-icon');
-        fullscreenIcon.textContent = '⛶';
-        fullscreenBtn.innerHTML = '<span class="fullscreen-icon">⛶</span>Fullscreen';
-      }).catch(err => {
-        console.error('Error exiting fullscreen:', err);
-      });
-    } else {
-      // If not in fullscreen, close the preview completely
-      this.closePreview();
-    }
-  }
-
   closePreview() {
     const modal = document.getElementById('imagePreviewModal');
     const previewImage = document.getElementById('previewImage');
     const previewVideo = document.getElementById('previewVideo');
-    
-    // Clear fullscreen control timer
-    if (this.fullscreenHideTimeout) {
-      clearTimeout(this.fullscreenHideTimeout);
-      this.fullscreenHideTimeout = null;
-    }
     
     // Exit fullscreen if active
     if (document.fullscreenElement) {
@@ -587,20 +515,15 @@ class PhotoSelectorRenderer {
     modal.style.display = 'none';
     modal.classList.remove('fullscreen-mode');
     
-    // Reset image
+    // Reset media elements
     previewImage.src = '';
-    previewImage.style.opacity = '0';
     previewImage.style.display = 'none';
     
-    // Reset video
     if (previewVideo) {
       previewVideo.pause();
       previewVideo.currentTime = 0;
+      previewVideo.src = '';
       previewVideo.style.display = 'none';
-      const videoSource = document.getElementById('videoSource');
-      if (videoSource) {
-        videoSource.src = '';
-      }
     }
     
     this.currentImageIndex = -1;
@@ -626,34 +549,26 @@ class PhotoSelectorRenderer {
     const prevBtn = document.querySelector('.nav-prev');
     const nextBtn = document.querySelector('.nav-next');
     
-    // Show/hide navigation buttons based on number of media files
-    if (this.currentMediaFiles.length <= 1) {
-      prevBtn.style.display = 'none';
-      nextBtn.style.display = 'none';
-    } else {
-      prevBtn.style.display = 'flex';
-      nextBtn.style.display = 'flex';
+    if (prevBtn && nextBtn) {
+      if (this.currentMediaFiles.length <= 1) {
+        prevBtn.style.display = 'none';
+        nextBtn.style.display = 'none';
+      } else {
+        prevBtn.style.display = 'block';
+        nextBtn.style.display = 'block';
+      }
     }
   }
 
   toggleFullscreen() {
     const modal = document.getElementById('imagePreviewModal');
-    const container = modal.querySelector('.preview-container');
     
     if (!document.fullscreenElement) {
-      // Enter fullscreen
-      container.requestFullscreen().then(() => {
-        modal.classList.add('fullscreen-mode');
-        this.updateFullscreenButton(true);
-      }).catch(err => {
+      modal.requestFullscreen().catch(err => {
         console.error('Error entering fullscreen:', err);
       });
     } else {
-      // Exit fullscreen
-      document.exitFullscreen().then(() => {
-        modal.classList.remove('fullscreen-mode');
-        this.updateFullscreenButton(false);
-      }).catch(err => {
+      document.exitFullscreen().catch(err => {
         console.error('Error exiting fullscreen:', err);
       });
     }
@@ -678,8 +593,11 @@ class PhotoSelectorRenderer {
     const previewVideo = document.getElementById('previewVideo');
     const isVideoVisible = previewVideo && previewVideo.style.display !== 'none';
     
-    if (isVideoVisible) {
-      previewVideo.currentTime = Math.max(0, previewVideo.currentTime - 10);
+    if (isVideoVisible && previewVideo.readyState >= 2) { // Only if video is loaded
+      const newTime = Math.max(0, previewVideo.currentTime - 10);
+      previewVideo.currentTime = newTime;
+      this.showSeekIndicator('-10s');
+      console.log(`Video seeked backward to ${newTime.toFixed(1)}s`);
     }
   }
 
@@ -687,9 +605,58 @@ class PhotoSelectorRenderer {
     const previewVideo = document.getElementById('previewVideo');
     const isVideoVisible = previewVideo && previewVideo.style.display !== 'none';
     
-    if (isVideoVisible) {
-      previewVideo.currentTime = Math.min(previewVideo.duration || 0, previewVideo.currentTime + 10);
+    if (isVideoVisible && previewVideo.readyState >= 2) { // Only if video is loaded
+      const duration = previewVideo.duration || 0;
+      const newTime = Math.min(duration, previewVideo.currentTime + 10);
+      previewVideo.currentTime = newTime;
+      this.showSeekIndicator('+10s');
+      console.log(`Video seeked forward to ${newTime.toFixed(1)}s`);
     }
+  }
+
+  showSeekIndicator(text) {
+    const modal = document.getElementById('imagePreviewModal');
+    if (!modal) return;
+    
+    // Remove existing indicator
+    const existing = modal.querySelector('.seek-indicator');
+    if (existing) {
+      existing.remove();
+    }
+    
+    // Create seek indicator
+    const indicator = document.createElement('div');
+    indicator.className = 'seek-indicator';
+    indicator.textContent = text;
+    indicator.style.cssText = `
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 8px 16px;
+      border-radius: 4px;
+      font-size: 18px;
+      font-weight: bold;
+      z-index: 1003;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    `;
+    
+    modal.appendChild(indicator);
+    
+    // Remove after 1 second
+    setTimeout(() => {
+      if (indicator.parentNode) {
+        indicator.style.opacity = '0';
+        setTimeout(() => {
+          if (indicator.parentNode) {
+            indicator.remove();
+          }
+        }, 300);
+      }
+    }, 700);
   }
 
   createPhotoItem(file, index) {
@@ -1237,42 +1204,23 @@ class PhotoSelectorRenderer {
 
   updateImageTransform() {
     const previewImage = document.getElementById('previewImage');
-    const previewVideo = document.getElementById('previewVideo');
-    const zoomContainer = document.getElementById('zoomContainer');
+    const previewMedia = document.querySelector('.preview-media');
     
-    // Only apply zoom to images, not videos
     if (previewImage && previewImage.style.display !== 'none') {
-      // Use requestAnimationFrame for smooth rendering
-      requestAnimationFrame(() => {
-        previewImage.style.transform = `scale(${this.zoomLevel}) translate(${this.panX / this.zoomLevel}px, ${this.panY / this.zoomLevel}px)`;
-        previewImage.style.transformOrigin = 'center center';
-      });
+      previewImage.style.transform = `scale(${this.zoomLevel}) translate(${this.panX / this.zoomLevel}px, ${this.panY / this.zoomLevel}px)`;
+      previewImage.style.transformOrigin = 'center center';
     }
     
-    if (zoomContainer) {
-      // Only enable grab cursor for images when zoomed
-      const isImage = previewImage && previewImage.style.display !== 'none';
-      zoomContainer.style.cursor = (isImage && this.zoomLevel > 1) ? 'grab' : 'default';
+    if (previewMedia) {
+      previewMedia.style.cursor = this.zoomLevel > 1 ? 'grab' : 'default';
     }
   }
 
   updateZoomControls() {
-    const zoomInBtn = document.getElementById('zoomInBtn');
-    const zoomOutBtn = document.getElementById('zoomOutBtn');
-    const zoomResetBtn = document.getElementById('zoomResetBtn');
-    const zoomLevelDisplay = document.getElementById('zoomLevel');
+    const zoomDisplay = document.getElementById('zoomLevel');
     
-    if (zoomInBtn) {
-      zoomInBtn.disabled = this.zoomLevel >= this.maxZoom;
-    }
-    if (zoomOutBtn) {
-      zoomOutBtn.disabled = this.zoomLevel <= this.minZoom;
-    }
-    if (zoomResetBtn) {
-      zoomResetBtn.disabled = this.zoomLevel === 1 && this.panX === 0 && this.panY === 0;
-    }
-    if (zoomLevelDisplay) {
-      zoomLevelDisplay.textContent = `Zoom: ${Math.round(this.zoomLevel * 100)}%`;
+    if (zoomDisplay) {
+      zoomDisplay.textContent = `${Math.round(this.zoomLevel * 100)}%`;
     }
   }
 
@@ -1293,193 +1241,50 @@ class PhotoSelectorRenderer {
     return mimeTypes[ext] || 'video/mp4';
   }
 
-  setZoomControlsVisibility(visible) {
-    const zoomControls = document.querySelector('.zoom-controls');
-    const zoomLevelDisplay = document.getElementById('zoomLevel');
+  toggleVideoPlayPause() {
+    const previewVideo = document.getElementById('previewVideo');
+    const isVideoVisible = previewVideo && previewVideo.style.display !== 'none';
     
+    if (isVideoVisible && previewVideo.readyState >= 2) { // Only if video is loaded
+      if (previewVideo.paused) {
+        previewVideo.play().catch(err => {
+          console.error('Error playing video:', err);
+        });
+      } else {
+        previewVideo.pause();
+      }
+    }
+  }
+
+  updatePreviewStarButton() {
+    if (this.currentImageIndex < 0 || this.currentImageIndex >= this.currentMediaFiles.length) {
+      return;
+    }
+
+    const currentFile = this.currentMediaFiles[this.currentImageIndex];
+    const isStarred = this.starredPhotosCache.has(currentFile.path);
+    const starButton = document.getElementById('previewStarButton');
+    
+    if (starButton) {
+      if (isStarred) {
+        starButton.classList.add('starred');
+        starButton.style.color = '#f39c12';
+        starButton.title = 'Remove from starred photos (S)';
+      } else {
+        starButton.classList.remove('starred');
+        starButton.style.color = '';
+        starButton.title = 'Star photo (S)';
+      }
+    }
+  }
+
+  setZoomControlsVisibility(visible) {
+    const zoomControls = document.getElementById('zoomControls');
     if (zoomControls) {
       zoomControls.style.display = visible ? 'flex' : 'none';
     }
-    if (zoomLevelDisplay) {
-      zoomLevelDisplay.style.display = visible ? 'inline' : 'none';
-    }
   }
 
-  // Fullscreen controls functionality
-  initializeFullscreenControls(modal) {
-    this.fullscreenControlsVisible = false;
-    this.fullscreenHideTimeout = null;
-    this.lastMouseMove = Date.now();
-    
-    // Get fullscreen overlay controls
-    this.fullscreenOverlay = modal.querySelector('.fullscreen-overlay-controls');
-    
-    // Mouse movement handler for fullscreen only
-    const handleMouseMove = (e) => {
-      if (document.fullscreenElement) {
-        this.lastMouseMove = Date.now();
-        this.showFullscreenControls();
-        this.resetFullscreenHideTimer();
-      }
-    };
-
-    // Mouse leave handler for fullscreen
-    const handleMouseLeave = () => {
-      if (document.fullscreenElement) {
-        this.resetFullscreenHideTimer(1000); // Hide faster when mouse leaves
-      }
-    };
-
-    // Attach event listeners
-    modal.addEventListener('mousemove', handleMouseMove);
-    modal.addEventListener('mouseleave', handleMouseLeave);
-    
-    // Add fullscreen change listener
-    document.addEventListener('fullscreenchange', () => {
-      const modalElement = document.getElementById('imagePreviewModal');
-      if (modalElement && modalElement.style.display === 'flex') {
-        const isFullscreen = !!document.fullscreenElement;
-        if (isFullscreen) {
-          modalElement.classList.add('fullscreen-mode');
-          this.hideFullscreenControls(); // Start hidden in fullscreen
-          this.syncFullscreenData(); // Sync data to fullscreen elements
-        } else {
-          modalElement.classList.remove('fullscreen-mode');
-          this.showFullscreenControls(); // Reset controls when exiting fullscreen
-        }
-        this.updateFullscreenButton(isFullscreen);
-      }
-    });
-  }
-
-  showFullscreenControls() {
-    if (!this.fullscreenControlsVisible && document.fullscreenElement) {
-      this.fullscreenControlsVisible = true;
-      if (this.fullscreenOverlay) {
-        this.fullscreenOverlay.classList.add('fullscreen-controls-visible');
-        this.fullscreenOverlay.classList.remove('fullscreen-controls-hidden');
-      }
-    }
-  }
-
-  hideFullscreenControls() {
-    if (this.fullscreenControlsVisible) {
-      this.fullscreenControlsVisible = false;
-      if (this.fullscreenOverlay) {
-        this.fullscreenOverlay.classList.add('fullscreen-controls-hidden');
-        this.fullscreenOverlay.classList.remove('fullscreen-controls-visible');
-      }
-    }
-  }
-
-  resetFullscreenHideTimer(delay = 3000) {
-    if (!document.fullscreenElement) return;
-    
-    // Clear existing timeout
-    if (this.fullscreenHideTimeout) {
-      clearTimeout(this.fullscreenHideTimeout);
-    }
-    
-    // Set new timeout
-    this.fullscreenHideTimeout = setTimeout(() => {
-      // Check if mouse has been idle and we're still in fullscreen
-      const timeSinceLastMove = Date.now() - this.lastMouseMove;
-      if (timeSinceLastMove >= delay - 100 && document.fullscreenElement) {
-        this.hideFullscreenControls();
-      }
-    }, delay);
-  }
-
-  // Sync data between preview and fullscreen elements
-  syncFullscreenData() {
-    // Sync filename
-    const previewTitle = document.getElementById('previewTitle');
-    const fullscreenTitle = document.getElementById('fullscreenTitle');
-    if (previewTitle && fullscreenTitle) {
-      fullscreenTitle.textContent = previewTitle.textContent;
-    }
-
-    // Sync index
-    const previewIndex = document.getElementById('previewIndex');
-    const fullscreenIndex = document.getElementById('fullscreenIndex');
-    if (previewIndex && fullscreenIndex) {
-      fullscreenIndex.textContent = previewIndex.textContent;
-    }
-
-    // Sync zoom level
-    const zoomLevel = document.getElementById('zoomLevel');
-    const zoomLevelFS = document.getElementById('zoomLevelFS');
-    if (zoomLevel && zoomLevelFS) {
-      zoomLevelFS.textContent = zoomLevel.textContent;
-    }
-
-    // Sync star status
-    const starBtn = document.getElementById('previewStarButton');
-    const starBtnFS = document.getElementById('previewStarButtonFS');
-    if (starBtn && starBtnFS) {
-      starBtnFS.className = starBtn.className.replace('star-btn', 'star-btn-fs');
-    }
-  }
-
-  // Update existing methods to work with new structure
-  updateStarButton(isStarred) {
-    // Update preview star button
-    const starButton = document.getElementById('previewStarButton');
-    const starIcon = starButton?.querySelector('.star-icon');
-    
-    if (starButton && starIcon) {
-      if (isStarred) {
-        starButton.classList.add('starred');
-        starButton.title = 'Remove from starred photos (S)';
-        starIcon.style.color = '#f39c12';
-      } else {
-        starButton.classList.remove('starred');
-        starButton.title = 'Star photo (S)';
-        starIcon.style.color = '';
-      }
-    }
-
-    // Update fullscreen star button
-    const starButtonFS = document.getElementById('previewStarButtonFS');
-    const starIconFS = starButtonFS?.querySelector('.star-icon');
-    
-    if (starButtonFS && starIconFS) {
-      if (isStarred) {
-        starButtonFS.classList.add('starred');
-        starButtonFS.title = 'Remove from starred photos (S)';
-        starIconFS.style.color = '#f39c12';
-      } else {
-        starButtonFS.classList.remove('starred');
-        starButtonFS.title = 'Star photo (S)';
-        starIconFS.style.color = '';
-      }
-    }
-  }
-
-  updateFullscreenButton(isFullscreen) {
-    const fullscreenBtn = document.querySelector('.fullscreen-btn');
-    const fullscreenIcon = document.querySelector('.fullscreen-icon');
-    
-    if (fullscreenBtn && fullscreenIcon) {
-      if (isFullscreen) {
-        fullscreenIcon.textContent = '⛷';
-        fullscreenBtn.title = 'Exit fullscreen (F)';
-      } else {
-        fullscreenIcon.textContent = '⛶';
-        fullscreenBtn.title = 'Enter fullscreen (F)';
-      }
-    }
-  }
-
-  // Override zoom level updates to sync both displays
-  updateZoomDisplay() {
-    const zoomLevel = document.getElementById('zoomLevel');
-    const zoomLevelFS = document.getElementById('zoomLevelFS');
-    const zoomPercentage = Math.round(this.currentZoom * 100) + '%';
-    
-    if (zoomLevel) zoomLevel.textContent = zoomPercentage;
-    if (zoomLevelFS) zoomLevelFS.textContent = zoomPercentage;
-  }
 }
 
 // Initialize the renderer when DOM is loaded
