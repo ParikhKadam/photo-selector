@@ -419,12 +419,18 @@ class PhotoSelectorRenderer {
       return;
     }
 
+    // Pause any currently playing video before switching
+    const previewVideo = document.getElementById('previewVideo');
+    if (previewVideo && previewVideo.style.display !== 'none' && !previewVideo.paused) {
+      previewVideo.pause();
+      previewVideo.currentTime = 0; // Reset to beginning
+    }
+
     this.currentImageIndex = index;
     const currentFile = this.currentMediaFiles[index];
     
     const modal = document.getElementById('imagePreviewModal');
     const previewImage = document.getElementById('previewImage');
-    const previewVideo = document.getElementById('previewVideo');
     const previewTitle = document.getElementById('previewTitle');
     const previewIndex = document.getElementById('previewIndex');
     
@@ -520,10 +526,11 @@ class PhotoSelectorRenderer {
     previewImage.style.display = 'none';
     
     if (previewVideo) {
-      previewVideo.pause();
-      previewVideo.currentTime = 0;
-      previewVideo.src = '';
+      previewVideo.pause(); // Ensure video is paused
+      previewVideo.currentTime = 0; // Reset to beginning
+      previewVideo.src = ''; // Clear the source
       previewVideo.style.display = 'none';
+      previewVideo.load(); // Reset the video element state
     }
     
     this.currentImageIndex = -1;
