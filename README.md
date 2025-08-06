@@ -40,16 +40,16 @@ See how easy it is to use Photo Selector! This demo shows the complete workflow 
 Download the latest release from the [Releases page](https://github.com/ParikhKadam/photo-selector/releases).
 
 ### Windows
-- **Installer**: `Photo.Selector.Setup.1.1.1.exe` (recommended)
-- **Portable**: `Photo.Selector.1.1.1.exe`
+- **Installer**: `Photo.Selector.Setup.x.x.x.exe` (recommended)
+- **Portable**: `Photo.Selector.x.x.x.exe`
 
 ### macOS
-- Download `Photo.Selector-1.1.1.dmg`
+- Download `Photo.Selector-x.x.x.dmg`
 - Drag to Applications folder
 
 ### Linux
-- Download `Photo.Selector-1.1.1.AppImage`
-- Make executable: `chmod +x Photo.Selector-1.1.1.AppImage`
+- Download `Photo.Selector-x.x.x.AppImage`
+- Make executable: `chmod +x Photo.Selector-x.x.x.AppImage`
 
 ### Development Setup
 1. Clone this repository
