@@ -1,3 +1,50 @@
+# Photo Selector v1.2.0 Release Notes
+
+## 🎬 Preview System Overhaul & Video Experience Enhancement
+
+This release features a complete rewrite of the preview system with focus on optimal screen space utilization, improved video playback experience, and enhanced user interface.
+
+### ✨ What's New in v1.2.0
+
+#### 🖼️ Completely Redesigned Preview System
+- **Fixed-Size Preview Container**: Preview pane now uses a fixed size (90% viewport) instead of expanding to image dimensions
+- **Optimal Screen Utilization**: Images and videos now properly fit within the preview container for consistent viewing experience
+- **Simplified Architecture**: Complete ground-up rebuild of the preview modal system for better maintainability and performance
+- **Enhanced Focus Management**: Improved keyboard shortcut handling with proper event capture to prevent conflicts
+
+#### 🎬 Enhanced Video Experience
+- **Smart Video Controls**: Resolved keyboard shortcut conflicts between application navigation and video player controls
+- **Advanced Video Seeking**: Ctrl+Arrow keys now seek backward/forward by 10 seconds with visual feedback indicators
+- **Automatic Audio Management**: Videos automatically pause when navigating to prevent background audio interference
+- **Improved Video Control Interaction**: Better focus management ensures keyboard shortcuts work consistently after video interaction
+
+#### ⌨️ Refined Keyboard Controls
+- **Conflict Resolution**: Fixed Space bar and Ctrl+Arrow key conflicts with native video controls
+- **Event Capture System**: Implemented proper event capture phase handling for reliable shortcut processing
+- **Visual Seeking Feedback**: Added fade-in/fade-out indicators when seeking through videos
+- **Consistent Navigation**: Arrow keys work reliably for media navigation regardless of video control focus
+
+#### 🎨 User Interface Improvements
+- **Streamlined Design**: Reduced CSS complexity from 1432 to 717 lines while maintaining full functionality
+- **Better Video Thumbnails**: Improved video overlay handling - controls no longer interfere with thumbnail display
+- **Performance Optimization**: Enhanced thumbnail generation for faster loading and smoother browsing experience
+- **Responsive Layout**: Better handling of different screen sizes and aspect ratios
+
+#### 🐛 Critical Bug Fixes
+- **Fixed**: Background video audio continuing when navigating between media items
+- **Fixed**: Keyboard shortcuts not working after interacting with video controls
+- **Fixed**: Preview container expanding beyond optimal size for large images
+- **Fixed**: Video control overlay interfering with thumbnail generation and display
+- **Fixed**: Focus management issues causing inconsistent keyboard behavior
+
+#### 🚀 Performance & Technical Improvements
+- **Efficient Thumbnail Generation**: Optimized image and video thumbnail creation for better performance
+- **Cleaner Codebase**: Simplified preview system architecture with better separation of concerns
+- **Improved Error Handling**: Better fallback mechanisms for media loading failures
+- **Enhanced Memory Management**: Proper cleanup of video elements to prevent memory leaks
+
+---
+
 # Photo Selector v1.1.1 Release Notes
 
 ## 🎯 Cross-Platform Release & Build System
