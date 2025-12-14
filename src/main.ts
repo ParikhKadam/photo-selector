@@ -103,7 +103,7 @@ class PhotoSelectorApp {
                 properties: ['openDirectory'],
                 title: 'Select Photo Folder'
               });
-              
+
               if (!result.canceled && result.filePaths.length > 0) {
                 this.mainWindow?.webContents.send('folder-selected', result.filePaths[0]);
               }
@@ -186,11 +186,11 @@ class PhotoSelectorApp {
         properties: ['openDirectory'],
         title: 'Select Photo Folder'
       });
-      
+
       if (!result.canceled && result.filePaths.length > 0) {
         return result.filePaths[0];
       }
-      
+
       return undefined;
     });
 
@@ -366,11 +366,11 @@ class PhotoSelectorApp {
         properties: ['openDirectory', 'createDirectory'],
         title: 'Select Export Destination Folder'
       });
-      
+
       if (!result.canceled && result.filePaths.length > 0) {
         return result.filePaths[0];
       }
-      
+
       return undefined;
     });
 
@@ -413,7 +413,7 @@ class PhotoSelectorApp {
     }
   }
 
-  private async getMediaFiles(folderPath: string): Promise<Array<{name: string, path: string, type: string, size: number, lastModified: Date}>> {
+  private async getMediaFiles(folderPath: string): Promise<Array<{ name: string, path: string, type: string, size: number, lastModified: Date, isDirectory?: boolean }>> {
     const supportedExtensions = new Set([
       // Image formats
       '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg', '.tiff', '.tif',
@@ -421,41 +421,67 @@ class PhotoSelectorApp {
       '.mp4', '.avi', '.mov', '.wmv', '.flv', '.webm', '.mkv', '.m4v', '.3gp'
     ]);
 
-    const files: Array<{name: string, path: string, type: string, size: number, lastModified: Date}> = [];
-    
+    const items: Array<{ name: string, path: string, type: string, size: number, lastModified: Date, isDirectory?: boolean }> = [];
+
     try {
-      const items = await fs.promises.readdir(folderPath, { withFileTypes: true });
-      
-      for (const item of items) {
+      const dirItems = await fs.promises.readdir(folderPath, { withFileTypes: true });
+
+      // First, collect directories
+      for (const item of dirItems) {
+        if (item.isDirectory()) {
+          const dirPath = path.join(folderPath, item.name);
+          try {
+            const stats = await fs.promises.stat(dirPath);
+            items.push({
+              name: item.name,
+              path: dirPath,
+              type: 'folder',
+              size: 0, // Directories don't have a meaningful size
+              lastModified: stats.mtime,
+              isDirectory: true
+            });
+          } catch (error) {
+            console.warn(`Could not stat directory ${dirPath}:`, error);
+          }
+        }
+      }
+
+      // Then, collect files
+      for (const item of dirItems) {
         if (item.isFile()) {
           const ext = path.extname(item.name).toLowerCase();
           if (supportedExtensions.has(ext)) {
             const filePath = path.join(folderPath, item.name);
             const stats = await fs.promises.stat(filePath);
-            
-            const type = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg', '.tiff', '.tif'].includes(ext) 
-              ? 'image' 
+
+            const type = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg', '.tiff', '.tif'].includes(ext)
+              ? 'image'
               : 'video';
-            
-            files.push({
+
+            items.push({
               name: item.name,
               path: filePath,
               type: type,
               size: stats.size,
-              lastModified: stats.mtime
+              lastModified: stats.mtime,
+              isDirectory: false
             });
           }
         }
       }
-      
-      // Sort files by name
-      files.sort((a, b) => a.name.localeCompare(b.name));
-      
+
+      // Sort items: directories first, then files, both alphabetically
+      items.sort((a, b) => {
+        if (a.isDirectory && !b.isDirectory) return -1;
+        if (!a.isDirectory && b.isDirectory) return 1;
+        return a.name.localeCompare(b.name);
+      });
+
     } catch (error) {
       console.error('Error reading directory:', error);
     }
-    
-    return files;
+
+    return items;
   }
 
   private async exportPhotos(starredPhotos: StarredPhoto[], exportPath: string): Promise<{
@@ -479,7 +505,7 @@ class PhotoSelectorApp {
 
         // Create destination path
         const destPath = path.join(exportPath, photo.fileName);
-        
+
         // Handle duplicate filenames by appending a number
         let finalDestPath = destPath;
         let counter = 1;
@@ -494,7 +520,7 @@ class PhotoSelectorApp {
         await fs.promises.copyFile(photo.filePath, finalDestPath);
         exported++;
         console.log(`Exported: ${photo.fileName} -> ${path.basename(finalDestPath)}`);
-        
+
       } catch (error) {
         failed++;
         const errorMsg = `Failed to export ${photo.fileName}: ${error instanceof Error ? error.message : 'Unknown error'}`;

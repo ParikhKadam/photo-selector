@@ -8,7 +8,9 @@ class PhotoSelectorRenderer {
     this.isViewingStarredPhotos = false; // Track if currently viewing starred photos
     this.isFilteringStarred = false; // Track if filtering to show only starred photos
     this.allMediaFiles = []; // Store all media files before filtering
-    
+    this.currentFolderPath = null; // Track current folder path for navigation
+    this.folderHistory = []; // Track folder navigation history
+
     // Zoom and pan state
     this.zoomLevel = 1;
     this.minZoom = 0.1;
@@ -18,10 +20,10 @@ class PhotoSelectorRenderer {
     this.isDragging = false;
     this.lastMouseX = 0;
     this.lastMouseY = 0;
-    
+
     // Light throttling for wheel events
     this.lastWheelTime = 0;
-    
+
     this.initializeEventListeners();
     this.createPreviewModal();
     this.loadStarredPhotosCache();
@@ -41,6 +43,14 @@ class PhotoSelectorRenderer {
     if (backHomeBtn) {
       backHomeBtn.addEventListener('click', () => {
         this.goBackToHome();
+      });
+    }
+
+    // Back folder button click handler
+    const backFolderBtn = document.getElementById('back-folder-btn');
+    if (backFolderBtn) {
+      backFolderBtn.addEventListener('click', () => {
+        this.goBackFolder();
       });
     }
 
@@ -93,59 +103,73 @@ class PhotoSelectorRenderer {
 
   async loadPhotosFromFolder(folderPath) {
     console.log('Loading photos from:', folderPath);
-    
+
+    // Set current folder path
+    this.currentFolderPath = folderPath;
+
     // Reset starred photos view flag and filter
     this.isViewingStarredPhotos = false;
     this.isFilteringStarred = false;
-    
+
     // Hide welcome section and show photo grid
     const welcomeSection = document.querySelector('.welcome-section');
     const photoGrid = document.getElementById('photo-grid');
     const toolbar = document.getElementById('toolbar');
-    
+
     if (welcomeSection) {
       welcomeSection.style.display = 'none';
     }
-    
+
     if (toolbar) {
       toolbar.style.display = 'flex';
     }
-    
+
     if (photoGrid) {
       photoGrid.style.display = 'grid';
-      photoGrid.innerHTML = '<div class="loading">Loading photos...</div>';
-      
+      photoGrid.innerHTML = '<div class="loading">Loading folder contents...</div>';
+
       try {
-        // Get actual media files from the selected folder
-        const mediaFiles = await window.electronAPI.getMediaFiles(folderPath);
-        
-        // Store all media files for filtering
-        this.allMediaFiles = mediaFiles;
-        this.currentMediaFiles = mediaFiles;
-        
+        // Get actual media files and folders from the selected folder
+        const items = await window.electronAPI.getMediaFiles(folderPath);
+
+        // Separate folders and files
+        const folders = items.filter(item => item.isDirectory);
+        const files = items.filter(item => !item.isDirectory);
+
+        // Store all media files for filtering (only files, not folders)
+        this.allMediaFiles = files;
+        this.currentMediaFiles = files;
+
         // Clear loading message
         photoGrid.innerHTML = '';
-        
-        if (mediaFiles.length === 0) {
-          photoGrid.innerHTML = '<div class="no-files">No images or videos found in this folder.</div>';
+
+        if (folders.length === 0 && files.length === 0) {
+          photoGrid.innerHTML = '<div class="no-files">No folders or supported media files found in this folder.</div>';
           return;
         }
-        
+
+        // Create folder items first
+        folders.forEach((folder, index) => {
+          const folderItem = this.createFolderItem(folder, index);
+          photoGrid.appendChild(folderItem);
+        });
+
         // Create photo items for each file
-        mediaFiles.forEach((file, index) => {
-          const photoItem = this.createPhotoItem(file, index);
+        files.forEach((file, index) => {
+          const photoItem = this.createPhotoItem(file, index + folders.length);
           photoGrid.appendChild(photoItem);
         });
 
         // Load starred status for current files
-        await this.updateStarredStatus(mediaFiles.map(f => f.path));
-        
-        // Update toolbar state
+        await this.updateStarredStatus(files.map(f => f.path));
+
+        // Update toolbar state and path display
         this.updateToolbarState();
         this.updateExportButtonText();
-        
+        this.updateCurrentPathDisplay();
+
       } catch (error) {
-        console.error('Error loading media files:', error);
+        console.error('Error loading folder contents:', error);
         photoGrid.innerHTML = '<div class="error">Error loading files from folder.</div>';
       }
     }
@@ -156,18 +180,18 @@ class PhotoSelectorRenderer {
     // Add visual feedback for selection
     const photoItems = document.querySelectorAll('.photo-item');
     photoItems.forEach(item => item.classList.remove('selected'));
-    
+
     // Find and select the clicked item
     event.currentTarget.classList.add('selected');
   }
 
   formatFileSize(bytes) {
     if (bytes === 0) return '0 Bytes';
-    
+
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    
+
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
   }
 
@@ -215,7 +239,7 @@ class PhotoSelectorRenderer {
         </div>
       </div>
     `;
-    
+
     document.body.appendChild(modal);
     this.setupPreviewEventListeners(modal);
   }
@@ -225,10 +249,10 @@ class PhotoSelectorRenderer {
     document.addEventListener('keydown', (e) => {
       const modal = document.getElementById('imagePreviewModal');
       if (modal && modal.style.display === 'flex') {
-        
+
         // Handle Ctrl+Arrow keys for video seeking (10 seconds)
         if (e.ctrlKey && !e.altKey && !e.metaKey && !e.shiftKey) {
-          switch(e.key) {
+          switch (e.key) {
             case 'ArrowLeft':
               this.skipVideoBackward();
               e.preventDefault();
@@ -241,13 +265,13 @@ class PhotoSelectorRenderer {
               return;
           }
         }
-        
+
         // Check if any modifier keys are pressed - if so, don't intercept other keys
         if (e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) {
           return;
         }
-        
-        switch(e.key) {
+
+        switch (e.key) {
           case 'Escape':
             if (document.fullscreenElement) {
               document.exitFullscreen();
@@ -339,7 +363,7 @@ class PhotoSelectorRenderer {
         e.preventDefault();
         const previewImage = document.getElementById('previewImage');
         const isImageVisible = previewImage && previewImage.style.display !== 'none';
-        
+
         if (isImageVisible) {
           if (e.deltaY < 0) {
             this.zoomIn();
@@ -356,7 +380,7 @@ class PhotoSelectorRenderer {
       previewMedia.addEventListener('mousedown', (e) => {
         const previewImage = document.getElementById('previewImage');
         const isImageVisible = previewImage && previewImage.style.display !== 'none';
-        
+
         if (this.zoomLevel > 1 && isImageVisible) {
           this.isDragging = true;
           this.lastMouseX = e.clientX;
@@ -370,13 +394,13 @@ class PhotoSelectorRenderer {
         if (this.isDragging && this.zoomLevel > 1) {
           const deltaX = e.clientX - this.lastMouseX;
           const deltaY = e.clientY - this.lastMouseY;
-          
+
           this.panX += deltaX;
           this.panY += deltaY;
-          
+
           this.lastMouseX = e.clientX;
           this.lastMouseY = e.clientY;
-          
+
           this.updateImageTransform();
           e.preventDefault();
         }
@@ -395,7 +419,7 @@ class PhotoSelectorRenderer {
       const modal = document.getElementById('imagePreviewModal');
       if (modal && modal.style.display === 'flex') {
         const fullscreenBtn = modal.querySelector('.fullscreen-btn');
-        
+
         if (document.fullscreenElement) {
           modal.classList.add('fullscreen-mode');
           fullscreenBtn.textContent = '⛷';
@@ -428,37 +452,37 @@ class PhotoSelectorRenderer {
 
     this.currentImageIndex = index;
     const currentFile = this.currentMediaFiles[index];
-    
+
     const modal = document.getElementById('imagePreviewModal');
     const previewImage = document.getElementById('previewImage');
     const previewTitle = document.getElementById('previewTitle');
     const previewIndex = document.getElementById('previewIndex');
-    
+
     // Show modal
     modal.style.display = 'flex';
-    
+
     // Ensure modal can receive focus
     modal.setAttribute('tabindex', '0');
     modal.focus();
-    
+
     // Reset zoom and pan
     this.resetZoom();
-    
+
     // Update UI
     this.updateNavigationButtons();
     this.updatePreviewStarButton();
-    
+
     // Set file info
     previewTitle.textContent = currentFile.name;
     previewIndex.textContent = `${index + 1} of ${this.currentMediaFiles.length}`;
-    
+
     // Hide both media elements initially
     previewImage.style.display = 'none';
     previewVideo.style.display = 'none';
-    
+
     try {
       const result = await window.electronAPI.getImagePreview(currentFile.path);
-      
+
       if (result.success && result.exists) {
         if (currentFile.type === 'video') {
           // Show video
@@ -466,7 +490,7 @@ class PhotoSelectorRenderer {
           previewVideo.style.display = 'block';
           previewVideo.load();
           this.setZoomControlsVisibility(false);
-          
+
           // Add video-specific event handlers to prevent conflicts
           previewVideo.addEventListener('keydown', (e) => {
             // Prevent video from handling our custom shortcuts, but allow Ctrl+Arrow for seeking
@@ -480,14 +504,14 @@ class PhotoSelectorRenderer {
               e.stopPropagation();
             }
           }, true);
-          
+
           // Ensure focus returns to modal after video interaction
           previewVideo.addEventListener('click', () => {
             setTimeout(() => {
               modal.focus();
             }, 10);
           });
-          
+
         } else {
           // Show image  
           previewImage.src = `file://${result.filePath}`;
@@ -512,19 +536,19 @@ class PhotoSelectorRenderer {
     const modal = document.getElementById('imagePreviewModal');
     const previewImage = document.getElementById('previewImage');
     const previewVideo = document.getElementById('previewVideo');
-    
+
     // Exit fullscreen if active
     if (document.fullscreenElement) {
       document.exitFullscreen();
     }
-    
+
     modal.style.display = 'none';
     modal.classList.remove('fullscreen-mode');
-    
+
     // Reset media elements
     previewImage.src = '';
     previewImage.style.display = 'none';
-    
+
     if (previewVideo) {
       previewVideo.pause(); // Ensure video is paused
       previewVideo.currentTime = 0; // Reset to beginning
@@ -532,30 +556,30 @@ class PhotoSelectorRenderer {
       previewVideo.style.display = 'none';
       previewVideo.load(); // Reset the video element state
     }
-    
+
     this.currentImageIndex = -1;
   }
 
   navigateImage(direction) {
     if (this.currentMediaFiles.length === 0) return;
-    
+
     // Navigate through all media files (images and videos)
     let nextIndex = this.currentImageIndex + direction;
-    
+
     // Wrap around
     if (nextIndex >= this.currentMediaFiles.length) {
       nextIndex = 0;
     } else if (nextIndex < 0) {
       nextIndex = this.currentMediaFiles.length - 1;
     }
-    
+
     this.displayImageAtIndex(nextIndex);
   }
 
   updateNavigationButtons() {
     const prevBtn = document.querySelector('.nav-prev');
     const nextBtn = document.querySelector('.nav-next');
-    
+
     if (prevBtn && nextBtn) {
       if (this.currentMediaFiles.length <= 1) {
         prevBtn.style.display = 'none';
@@ -569,7 +593,7 @@ class PhotoSelectorRenderer {
 
   toggleFullscreen() {
     const modal = document.getElementById('imagePreviewModal');
-    
+
     if (!document.fullscreenElement) {
       modal.requestFullscreen().catch(err => {
         console.error('Error entering fullscreen:', err);
@@ -584,7 +608,7 @@ class PhotoSelectorRenderer {
   toggleVideoPlayPause() {
     const previewVideo = document.getElementById('previewVideo');
     const isVideoVisible = previewVideo && previewVideo.style.display !== 'none';
-    
+
     if (isVideoVisible) {
       if (previewVideo.paused) {
         previewVideo.play().catch(err => {
@@ -599,7 +623,7 @@ class PhotoSelectorRenderer {
   skipVideoBackward() {
     const previewVideo = document.getElementById('previewVideo');
     const isVideoVisible = previewVideo && previewVideo.style.display !== 'none';
-    
+
     if (isVideoVisible && previewVideo.readyState >= 2) { // Only if video is loaded
       const newTime = Math.max(0, previewVideo.currentTime - 10);
       previewVideo.currentTime = newTime;
@@ -611,7 +635,7 @@ class PhotoSelectorRenderer {
   skipVideoForward() {
     const previewVideo = document.getElementById('previewVideo');
     const isVideoVisible = previewVideo && previewVideo.style.display !== 'none';
-    
+
     if (isVideoVisible && previewVideo.readyState >= 2) { // Only if video is loaded
       const duration = previewVideo.duration || 0;
       const newTime = Math.min(duration, previewVideo.currentTime + 10);
@@ -624,13 +648,13 @@ class PhotoSelectorRenderer {
   showSeekIndicator(text) {
     const modal = document.getElementById('imagePreviewModal');
     if (!modal) return;
-    
+
     // Remove existing indicator
     const existing = modal.querySelector('.seek-indicator');
     if (existing) {
       existing.remove();
     }
-    
+
     // Create seek indicator
     const indicator = document.createElement('div');
     indicator.className = 'seek-indicator';
@@ -650,9 +674,9 @@ class PhotoSelectorRenderer {
       pointer-events: none;
       transition: opacity 0.3s ease;
     `;
-    
+
     modal.appendChild(indicator);
-    
+
     // Remove after 1 second
     setTimeout(() => {
       if (indicator.parentNode) {
@@ -669,7 +693,7 @@ class PhotoSelectorRenderer {
   createPhotoItem(file, index) {
     const photoItem = document.createElement('div');
     photoItem.className = 'photo-item';
-    
+
     // Create different content based on file type
     let mediaElement;
     if (file.type === 'image') {
@@ -686,10 +710,10 @@ class PhotoSelectorRenderer {
         </div>
       `;
     }
-    
+
     // Format file size
     const fileSize = this.formatFileSize(file.size);
-    
+
     photoItem.innerHTML = `
       ${mediaElement}
       <div class="photo-info">
@@ -703,10 +727,10 @@ class PhotoSelectorRenderer {
         <span class="star-icon">★</span>
       </button>
     `;
-    
+
     // Add data attribute for easier star status updates
     photoItem.setAttribute('data-file-path', file.path);
-    
+
     // Add click handler for photo selection
     photoItem.addEventListener('click', (e) => {
       // Don't select if clicking on star button
@@ -714,7 +738,7 @@ class PhotoSelectorRenderer {
         this.selectPhoto(file, index);
       }
     });
-    
+
     // Add star button click handler
     const starButton = photoItem.querySelector('.star-button');
     if (starButton) {
@@ -724,15 +748,46 @@ class PhotoSelectorRenderer {
         this.togglePhotoStar(file, starButton);
       });
     }
-    
+
     // Add double-click handler for preview (for both images and videos)
     photoItem.addEventListener('dblclick', () => {
       this.openPreview(file, index);
     });
     photoItem.style.cursor = 'pointer';
     photoItem.title = `Double-click to preview ${file.name}`;
-    
+
     return photoItem;
+  }
+
+  createFolderItem(folder, index) {
+    const folderItem = document.createElement('div');
+    folderItem.className = 'folder-item';
+
+    folderItem.innerHTML = `
+      <div class="folder-icon">
+        <span class="folder-emoji">📁</span>
+      </div>
+      <div class="folder-info">
+        <div class="folder-name" title="${folder.name}">${folder.name}</div>
+        <div class="folder-details">
+          <span class="folder-type">FOLDER</span>
+        </div>
+      </div>
+    `;
+
+    // Add click handler for folder navigation
+    folderItem.addEventListener('click', (e) => {
+      // Don't navigate if clicking on something else
+      if (!e.target.closest('.folder-icon') && !e.target.closest('.folder-info')) {
+        return;
+      }
+      this.navigateToFolder(folder.path);
+    });
+
+    folderItem.style.cursor = 'pointer';
+    folderItem.title = `Click to open folder: ${folder.name}`;
+
+    return folderItem;
   }
 
   // Star/Shortlist functionality methods
@@ -756,7 +811,7 @@ class PhotoSelectorRenderer {
       if (result.success) {
         // Update cache
         this.starredPhotosCache = new Set([...this.starredPhotosCache, ...result.starredPaths]);
-        
+
         // Update UI for starred photos
         result.starredPaths.forEach(filePath => {
           const photoItem = document.querySelector(`[data-file-path="${filePath}"]`);
@@ -776,7 +831,7 @@ class PhotoSelectorRenderer {
 
   async togglePhotoStar(file, starButton) {
     const isCurrentlyStarred = this.starredPhotosCache.has(file.path);
-    
+
     try {
       if (isCurrentlyStarred) {
         // Unstar the photo
@@ -786,13 +841,13 @@ class PhotoSelectorRenderer {
           starButton.classList.remove('starred');
           starButton.title = 'Add to starred photos';
           this.updateExportButtonText();
-          
+
           // If we're viewing starred photos, remove the item from view
           if (this.isViewingStarredPhotos) {
             const photoItem = starButton.closest('.photo-item');
             if (photoItem) {
               photoItem.remove();
-              
+
               // Check if there are no more starred photos
               const remainingItems = document.querySelectorAll('.photo-item').length;
               if (remainingItems === 0) {
@@ -811,7 +866,7 @@ class PhotoSelectorRenderer {
           fileType: file.type,
           lastModified: file.lastModified.toISOString()
         };
-        
+
         const result = await window.electronAPI.starPhoto(photoData);
         if (result.success) {
           this.starredPhotosCache.add(file.path);
@@ -827,33 +882,33 @@ class PhotoSelectorRenderer {
 
   async showStarredPhotos() {
     console.log('Showing starred photos');
-    
+
     // Hide welcome section and show photo grid
     const welcomeSection = document.querySelector('.welcome-section');
     const photoGrid = document.getElementById('photo-grid');
     const toolbar = document.getElementById('toolbar');
-    
+
     if (welcomeSection) {
       welcomeSection.style.display = 'none';
     }
-    
+
     if (toolbar) {
       toolbar.style.display = 'flex';
     }
-    
+
     if (photoGrid) {
       photoGrid.style.display = 'grid';
       photoGrid.innerHTML = '<div class="loading">Loading starred photos...</div>';
-      
+
       try {
         const result = await window.electronAPI.getStarredPhotos();
-        
+
         if (!result.success) {
           throw new Error(result.error || 'Failed to load starred photos');
         }
-        
+
         const starredPhotos = result.photos;
-        
+
         // Convert to media files format
         this.currentMediaFiles = starredPhotos.map(photo => ({
           name: photo.fileName,
@@ -862,21 +917,21 @@ class PhotoSelectorRenderer {
           size: photo.fileSize,
           lastModified: new Date(photo.lastModified)
         }));
-        
+
         // Also set as allMediaFiles for consistency
         this.allMediaFiles = this.currentMediaFiles;
         this.isViewingStarredPhotos = true;
         this.isFilteringStarred = false;
-        
+
         // Clear loading message
         photoGrid.innerHTML = '';
-        
+
         if (starredPhotos.length === 0) {
           photoGrid.innerHTML = '<div class="no-files">No starred photos found.</div>';
           this.updateToolbarState();
           return;
         }
-        
+
         // Create photo items for each starred photo
         starredPhotos.forEach((photo, index) => {
           const file = {
@@ -887,20 +942,20 @@ class PhotoSelectorRenderer {
             lastModified: new Date(photo.lastModified)
           };
           const photoItem = this.createPhotoItem(file, index);
-          
+
           // Mark as starred
           const starButton = photoItem.querySelector('.star-button');
           if (starButton) {
             starButton.classList.add('starred');
             starButton.title = 'Remove from starred photos';
           }
-          
+
           photoGrid.appendChild(photoItem);
         });
-        
+
         // Update toolbar state
         this.updateToolbarState();
-        
+
       } catch (error) {
         console.error('Error loading starred photos:', error);
         photoGrid.innerHTML = '<div class="error">Error loading starred photos.</div>';
@@ -915,11 +970,11 @@ class PhotoSelectorRenderer {
 
     const currentFile = this.currentMediaFiles[this.currentImageIndex];
     const previewStarButton = document.getElementById('previewStarButton');
-    
+
     if (previewStarButton) {
       await this.togglePhotoStar(currentFile, previewStarButton);
       this.updatePreviewStarButton();
-      
+
       // Also update the grid star button if visible
       const gridStarButton = document.querySelector(`[data-file-path="${currentFile.path}"] .star-button`);
       if (gridStarButton) {
@@ -942,7 +997,7 @@ class PhotoSelectorRenderer {
 
     const currentFile = this.currentMediaFiles[this.currentImageIndex];
     const isStarred = this.starredPhotosCache.has(currentFile.path);
-    
+
     this.updateStarButton(isStarred);
   }
 
@@ -954,22 +1009,22 @@ class PhotoSelectorRenderer {
     }
 
     this.isFilteringStarred = !this.isFilteringStarred;
-    
+
     if (this.isFilteringStarred) {
       this.showOnlyStarredPhotos();
     } else {
       this.showAllPhotos();
     }
-    
+
     this.updateToolbarState();
   }
 
   showOnlyStarredPhotos() {
     // Filter to show only starred photos from current folder
-    const starredFiles = this.allMediaFiles.filter(file => 
+    const starredFiles = this.allMediaFiles.filter(file =>
       this.starredPhotosCache.has(file.path)
     );
-    
+
     this.currentMediaFiles = starredFiles;
     this.renderPhotoGrid(starredFiles);
     this.isFilteringStarred = true;
@@ -985,11 +1040,11 @@ class PhotoSelectorRenderer {
 
   renderPhotoGrid(mediaFiles) {
     const photoGrid = document.getElementById('photo-grid');
-    
+
     if (!photoGrid) return;
-    
+
     photoGrid.innerHTML = '';
-    
+
     if (mediaFiles.length === 0) {
       if (this.isFilteringStarred) {
         photoGrid.innerHTML = '<div class="no-files">No starred photos found in this folder.</div>';
@@ -998,7 +1053,7 @@ class PhotoSelectorRenderer {
       }
       return;
     }
-    
+
     // Create photo items for each file
     mediaFiles.forEach((file, index) => {
       const photoItem = this.createPhotoItem(file, index);
@@ -1031,7 +1086,7 @@ class PhotoSelectorRenderer {
 
   updateToolbarState() {
     const filterBtn = document.getElementById('filter-starred-btn');
-    
+
     if (filterBtn) {
       if (this.isViewingStarredPhotos) {
         // When viewing starred photos collection, disable filter button
@@ -1059,33 +1114,33 @@ class PhotoSelectorRenderer {
     try {
       // Get starred photos
       const result = await window.electronAPI.getStarredPhotos();
-      
+
       if (!result.success || result.photos.length === 0) {
         alert('No starred photos to export.');
         return;
       }
-      
+
       // Select export destination
       const exportPath = await window.electronAPI.selectExportFolder();
-      
+
       if (!exportPath) {
         return; // User cancelled
       }
-      
+
       // Show progress (we'll create a simple progress indicator)
       this.showExportProgress(true);
-      
+
       // Export the photos
       const exportResult = await window.electronAPI.exportStarredPhotos(exportPath);
-      
+
       this.showExportProgress(false);
-      
+
       if (exportResult.success && exportResult.results) {
         const { exported, failed, errors } = exportResult.results;
-        
+
         let message = `Export completed!\n\n`;
         message += `✅ Successfully exported: ${exported} photos\n`;
-        
+
         if (failed > 0) {
           message += `❌ Failed to export: ${failed} photos\n\n`;
           message += `Errors:\n${errors.slice(0, 5).join('\n')}`;
@@ -1093,12 +1148,12 @@ class PhotoSelectorRenderer {
             message += `\n... and ${errors.length - 5} more errors`;
           }
         }
-        
+
         alert(message);
       } else {
         alert(`Export failed: ${exportResult.error || 'Unknown error'}`);
       }
-      
+
     } catch (error) {
       this.showExportProgress(false);
       console.error('Error exporting starred photos:', error);
@@ -1108,9 +1163,9 @@ class PhotoSelectorRenderer {
 
   showExportProgress(show) {
     const exportBtn = document.getElementById('export-starred-btn');
-    
+
     if (!exportBtn) return;
-    
+
     if (show) {
       exportBtn.disabled = true;
       exportBtn.innerHTML = '<span class="icon">⏳</span><span class="text">Exporting...</span>';
@@ -1136,6 +1191,8 @@ class PhotoSelectorRenderer {
     this.currentImageIndex = -1;
     this.isViewingStarredPhotos = false;
     this.isFilteringStarred = false;
+    this.currentFolderPath = null;
+    this.folderHistory = [];
 
     // Hide toolbar and photo grid
     const toolbar = document.getElementById('toolbar');
@@ -1145,12 +1202,12 @@ class PhotoSelectorRenderer {
     if (toolbar) {
       toolbar.style.display = 'none';
     }
-    
+
     if (photoGrid) {
       photoGrid.style.display = 'none';
       photoGrid.innerHTML = '';
     }
-    
+
     if (welcomeSection) {
       welcomeSection.style.display = 'flex';
     }
@@ -1158,12 +1215,64 @@ class PhotoSelectorRenderer {
     console.log('Returned to home screen');
   }
 
+  navigateToFolder(folderPath) {
+    console.log('Navigating to folder:', folderPath);
+
+    // Add current folder to history if we have one
+    if (this.currentFolderPath) {
+      this.folderHistory.push(this.currentFolderPath);
+    }
+
+    // Load the new folder
+    this.loadPhotosFromFolder(folderPath);
+  }
+
+  goBackFolder() {
+    if (this.folderHistory.length > 0) {
+      const previousFolder = this.folderHistory.pop();
+      console.log('Going back to folder:', previousFolder);
+      this.loadPhotosFromFolder(previousFolder);
+    }
+  }
+
+  updateCurrentPathDisplay() {
+    // Update the toolbar to show current path
+    const pathDisplay = document.getElementById('current-path');
+    const backFolderBtn = document.getElementById('back-folder-btn');
+
+    if (pathDisplay && this.currentFolderPath) {
+      // Create breadcrumb path
+      const pathParts = this.currentFolderPath.split(/[/\\]/).filter(p => p);
+      const breadcrumbs = pathParts.map((part, index) => {
+        const fullPath = pathParts.slice(0, index + 1).join('/');
+        return `<span class="breadcrumb" data-path="${fullPath}">${part}</span>`;
+      }).join(' / ');
+
+      pathDisplay.innerHTML = `<span class="path-label">Current:</span> ${breadcrumbs}`;
+
+      // Add click handlers for breadcrumbs
+      pathDisplay.querySelectorAll('.breadcrumb').forEach(breadcrumb => {
+        breadcrumb.addEventListener('click', () => {
+          const path = breadcrumb.dataset.path;
+          this.navigateToFolder(path);
+        });
+      });
+    } else if (pathDisplay) {
+      pathDisplay.innerHTML = '';
+    }
+
+    // Show/hide back folder button
+    if (backFolderBtn) {
+      backFolderBtn.style.display = this.folderHistory.length > 0 ? 'flex' : 'none';
+    }
+  }
+
   selectPhoto(photo) {
     console.log('Selected photo:', photo.name);
     // Add visual feedback for selection
     const photoItems = document.querySelectorAll('.photo-item');
     photoItems.forEach(item => item.classList.remove('selected'));
-    
+
     // Find and select the clicked item
     event.currentTarget.classList.add('selected');
   }
@@ -1212,12 +1321,12 @@ class PhotoSelectorRenderer {
   updateImageTransform() {
     const previewImage = document.getElementById('previewImage');
     const previewMedia = document.querySelector('.preview-media');
-    
+
     if (previewImage && previewImage.style.display !== 'none') {
       previewImage.style.transform = `scale(${this.zoomLevel}) translate(${this.panX / this.zoomLevel}px, ${this.panY / this.zoomLevel}px)`;
       previewImage.style.transformOrigin = 'center center';
     }
-    
+
     if (previewMedia) {
       previewMedia.style.cursor = this.zoomLevel > 1 ? 'grab' : 'default';
     }
@@ -1225,7 +1334,7 @@ class PhotoSelectorRenderer {
 
   updateZoomControls() {
     const zoomDisplay = document.getElementById('zoomLevel');
-    
+
     if (zoomDisplay) {
       zoomDisplay.textContent = `${Math.round(this.zoomLevel * 100)}%`;
     }
@@ -1251,7 +1360,7 @@ class PhotoSelectorRenderer {
   toggleVideoPlayPause() {
     const previewVideo = document.getElementById('previewVideo');
     const isVideoVisible = previewVideo && previewVideo.style.display !== 'none';
-    
+
     if (isVideoVisible && previewVideo.readyState >= 2) { // Only if video is loaded
       if (previewVideo.paused) {
         previewVideo.play().catch(err => {
@@ -1271,7 +1380,7 @@ class PhotoSelectorRenderer {
     const currentFile = this.currentMediaFiles[this.currentImageIndex];
     const isStarred = this.starredPhotosCache.has(currentFile.path);
     const starButton = document.getElementById('previewStarButton');
-    
+
     if (starButton) {
       if (isStarred) {
         starButton.classList.add('starred');
