@@ -215,8 +215,8 @@ class PhotoSelectorRenderer {
         <button class="preview-close" onclick="photoRenderer.closePreview()" title="Close (ESC)">&times;</button>
         
         <!-- Navigation arrows -->
-        <button class="nav-arrow nav-prev" onclick="photoRenderer.navigateImage(-1)" title="Previous (←) | Ctrl+← to skip back 10s in video">‹</button>
-        <button class="nav-arrow nav-next" onclick="photoRenderer.navigateImage(1)" title="Next (→) | Ctrl+→ to skip forward 10s in video">›</button>
+        <button class="nav-arrow nav-prev" onclick="photoRenderer.navigateImage(-1)" title="Previous (← or <) | Ctrl+← to skip back 10s in video">‹</button>
+        <button class="nav-arrow nav-next" onclick="photoRenderer.navigateImage(1)" title="Next (→ or >) | Ctrl+→ to skip forward 10s in video">›</button>
 
         <!-- Main image/video area -->
         <div class="preview-media">
@@ -304,7 +304,17 @@ class PhotoSelectorRenderer {
             e.preventDefault();
             e.stopPropagation();
             break;
+          case '<':
+            this.navigateImage(-1);
+            e.preventDefault();
+            e.stopPropagation();
+            break;
           case 'ArrowRight':
+            this.navigateImage(1);
+            e.preventDefault();
+            e.stopPropagation();
+            break;
+          case '>':
             this.navigateImage(1);
             e.preventDefault();
             e.stopPropagation();
@@ -505,7 +515,7 @@ class PhotoSelectorRenderer {
               return;
             }
             // Prevent video from handling other custom shortcuts
-            if (['ArrowLeft', 'ArrowRight', 'f', 'F', 's', 'S', ' ', 'Escape'].includes(e.key)) {
+            if (['ArrowLeft', 'ArrowRight', '<', '>', 'f', 'F', 's', 'S', ' ', 'Escape'].includes(e.key)) {
               e.preventDefault();
               e.stopPropagation();
             }
