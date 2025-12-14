@@ -1,6 +1,6 @@
 {
   "name": "photo-selector",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "A simple and elegant photo selector application built with Electron and TypeScript",
   "main": "dist/main.js",
   "scripts": {
@@ -41,7 +41,7 @@
   },
   "dependencies": {
     "@types/sqlite3": "^3.1.11",
-    "sharp": "^0.34.3",
+    "sharp": "^0.34.5",
     "sqlite3": "^5.1.7"
   },
   "build": {
@@ -139,6 +139,11 @@
     "appImage": {
       "license": "LICENSE"
     },
+    "asarUnpack": [
+      "**/node_modules/sharp/**/*",
+      "**/node_modules/@img/**/*"
+    ],
+    "afterPack": "./afterPack.js",
     "publish": null
   }
 }
