@@ -1,3 +1,45 @@
+# Photo Selector v1.2.5 Release Notes
+
+## ⌨️ Extended Keyboard Navigation - A/D Keys Support
+
+This release extends keyboard navigation capabilities by adding support for A and D keys, providing users with even more flexible navigation options that are commonly used in gaming and media applications.
+
+### ✨ What's New in v1.2.5
+
+#### ⌨️ Extended Keyboard Navigation
+- **A/D Key Support**: Added `A` and `D` keys as navigation alternatives (both lowercase and uppercase)
+- **Gaming-Style Controls**: Familiar A/D controls for users accustomed to gaming navigation
+- **Multiple Navigation Methods**: Users now have 3 different key sets: arrows (`←/→`), brackets (`< >`), and A/D keys
+- **Case-Insensitive**: Both `a`/`A` and `d`/`D` keys work identically
+
+#### 🎯 Enhanced User Experience
+- **Flexible Preferences**: Choose from arrow keys, bracket keys, or A/D keys based on personal preference
+- **Updated Tooltips**: Navigation buttons now show "Previous (← or A)" and "Next (→ or D)"
+- **Comprehensive Documentation**: README updated with all available navigation methods
+- **Intuitive Controls**: A/D keys provide left/right navigation that's intuitive for many users
+
+### 🔧 Technical Implementation
+
+#### Keyboard Event Handling
+- **Extended Key Detection**: Added `a`, `A`, `d`, `D` key handlers in keyboard event listeners
+- **Unified Navigation**: All key sets trigger the same `navigateImage()` function
+- **Event Management**: Proper event prevention to avoid conflicts with video controls
+
+#### UI Updates
+- **Tooltip Enhancement**: Navigation button titles updated to show A/D key options
+- **Documentation Update**: README.md reflects all available keyboard navigation methods
+- **User Guidance**: Clear indication of multiple navigation options available
+
+### ✅ Verification
+- `A` key navigates to previous media (same as `←` and `<`)
+- `D` key navigates to next media (same as `→` and `>`)
+- Case-insensitive operation (both `a`/`A` and `d`/`D` work)
+- Tooltips show all available key options
+- No conflicts with existing shortcuts
+- Works across all media types (images and videos)
+
+---
+
 # Photo Selector v1.2.4 Release Notes
 
 ## ⌨️ Enhanced Keyboard Navigation & Accessibility
