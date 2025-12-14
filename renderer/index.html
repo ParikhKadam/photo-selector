@@ -1,19 +1,22 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
   <title>Photo Selector</title>
   <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
   <div class="container">
     <header class="header">
       <h1>Photo Selector</h1>
       <p>Select and organize your photos with ease</p>
     </header>
-    
+
     <main class="main-content">
       <div class="welcome-section">
         <div class="welcome-card">
@@ -33,13 +36,20 @@
             <span class="icon">🏠</span>
             <span class="text">Home</span>
           </button>
+          <button id="back-folder-btn" class="toolbar-button back-button" title="Go back to previous folder"
+            style="display: none;">
+            <span class="icon">⬅️</span>
+            <span class="text">Back</span>
+          </button>
           <button id="filter-starred-btn" class="toolbar-button filter-button" title="Show only starred photos">
             <span class="icon">⭐</span>
             <span class="text">Show Starred Only</span>
           </button>
         </div>
+        <div class="current-path" id="current-path"></div>
         <div class="toolbar-right">
-          <button id="export-starred-btn" class="toolbar-button export-button" title="Export starred photos to a folder">
+          <button id="export-starred-btn" class="toolbar-button export-button"
+            title="Export starred photos to a folder">
             <span class="icon">📤</span>
             <span class="text">Export Starred</span>
           </button>
@@ -58,4 +68,5 @@
 
   <script src="renderer.js"></script>
 </body>
+
 </html>
