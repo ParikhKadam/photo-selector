@@ -145,6 +145,12 @@ class PhotoSelectorRenderer {
 
         if (folders.length === 0 && files.length === 0) {
           photoGrid.innerHTML = '<div class="no-files">No folders or supported media files found in this folder.</div>';
+
+          // Update toolbar state even for empty folders
+          this.updateToolbarState();
+          this.updateExportButtonText();
+          this.updateCurrentPathDisplay();
+
           return;
         }
 
