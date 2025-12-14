@@ -1,3 +1,41 @@
+# Photo Selector v1.2.3 Release Notes
+
+## 🐛 Folder Navigation Bug Fixes & UX Improvements
+
+This patch release addresses critical bugs in the folder navigation system and improves the overall user experience when browsing through directories and navigating between media files.
+
+### 🐛 Bug Fixes
+
+#### 📁 Folder Navigation Fixes
+- **Fixed**: Back button visibility in empty subfolders - navigation controls now remain accessible even when folders contain no media files
+- **Fixed**: File selection indexing - clicking on a photo now correctly opens that specific file in the viewer instead of starting from the beginning
+- **Fixed**: Navigation state consistency - toolbar buttons and navigation controls now properly reflect the current folder state
+
+#### 🎯 User Experience Improvements
+- **Enhanced**: Empty folder handling - users can now navigate back from empty folders without losing navigation context
+- **Improved**: File selection feedback - visual selection indicators work correctly across all folder navigation scenarios
+- **Optimized**: Navigation state updates - toolbar and controls update immediately when entering or leaving folders
+
+### 🔧 Technical Details
+
+#### Navigation State Management
+- **Fixed**: `updateToolbarState()` now called consistently for empty folders
+- **Fixed**: Back button display logic accounts for folder history in all scenarios
+- **Fixed**: File indexing ensures selected file opens in viewer, not first file in list
+
+#### UI State Synchronization
+- **Enhanced**: Toolbar button visibility logic for different folder states
+- **Improved**: Visual feedback for file selection across navigation contexts
+- **Optimized**: State updates prevent UI inconsistencies during folder transitions
+
+### ✅ Verification
+- Back button appears correctly in empty folders
+- Clicking photos opens the correct file in viewer
+- Navigation controls remain functional across all folder scenarios
+- UI state stays consistent during folder browsing
+
+---
+
 # Photo Selector v1.2.2 Release Notes
 
 ## 📁 Folder Navigation & Enhanced File Management
