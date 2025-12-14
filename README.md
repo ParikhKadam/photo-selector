@@ -71,7 +71,7 @@ Download the latest release from the [Releases page](https://github.com/ParikhKa
 5. **Export**: Copy starred media to any folder
 
 ### Keyboard Shortcuts
-- `←/→` - Navigate between media
+- `←/→` or `< >` - Navigate between media
 - `S` - Star/unstar current item
 - `+/-` - Zoom in/out (images)
 - `Ctrl+O` - Open folder
