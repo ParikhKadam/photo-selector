@@ -1,3 +1,44 @@
+# Photo Selector v1.2.4 Release Notes
+
+## ⌨️ Enhanced Keyboard Navigation & Accessibility
+
+This release introduces enhanced keyboard navigation options, providing users with multiple ways to navigate through media files using both arrow keys and alternative bracket keys for improved accessibility and user preference.
+
+### ✨ What's New in v1.2.4
+
+#### ⌨️ Enhanced Keyboard Navigation
+- **Dual Navigation Keys**: Added support for `<` and `>` keys as alternatives to `←` and `→` arrow keys
+- **Improved Accessibility**: Multiple navigation options cater to different keyboard layouts and user preferences
+- **Consistent Behavior**: Both key sets provide identical navigation functionality
+- **Visual Feedback**: Navigation button tooltips updated to reflect both key options
+
+#### 🎯 User Experience Improvements
+- **Flexible Controls**: Users can choose between arrow keys or bracket keys based on preference
+- **Enhanced Tooltips**: Navigation buttons now show both arrow and bracket key options
+- **Seamless Integration**: New keys integrate seamlessly with existing keyboard shortcuts
+- **No Conflicts**: Bracket keys don't interfere with existing functionality
+
+### 🔧 Technical Implementation
+
+#### Keyboard Event Handling
+- **Extended Key Detection**: Added `<` and `>` key handlers in keyboard event listeners
+- **Unified Navigation**: Both key sets trigger the same `navigateImage()` function
+- **Event Prevention**: Proper event handling prevents conflicts with video controls and other elements
+
+#### UI Updates
+- **Tooltip Enhancement**: Navigation button titles updated to show both key options
+- **Documentation Update**: README.md updated with new keyboard shortcut information
+- **Consistent Messaging**: All user-facing text reflects the dual navigation options
+
+### ✅ Verification
+- `<` key navigates to previous media (same as `←`)
+- `>` key navigates to next media (same as `→`)
+- Tooltips show both key options
+- No conflicts with existing shortcuts
+- Works across all media types (images and videos)
+
+---
+
 # Photo Selector v1.2.3 Release Notes
 
 ## 🐛 Folder Navigation Bug Fixes & UX Improvements
