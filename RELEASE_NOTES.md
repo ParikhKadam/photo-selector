@@ -1,3 +1,46 @@
+# Photo Selector v1.2.1 Release Notes
+
+## 🛠️ Critical Bug Fix - Sharp Library AppImage Support
+
+This patch release fixes a critical issue with the Linux AppImage distribution where the Sharp image processing library failed to load, preventing the application from working properly.
+
+### 🐛 Bug Fixes
+
+#### 🔧 Sharp Library Bundling Issue
+- **Fixed**: `libvips-cpp.so.8.17.3: cannot open shared object file` error in AppImage builds
+- **Root Cause**: Sharp's native dependencies weren't being properly unpacked from the ASAR archive
+- **Solution**: Updated `asarUnpack` configuration to include both `sharp` and `@img/*` packages
+- **Impact**: AppImage builds now work correctly on Linux systems
+
+#### 📦 Build System Improvements
+- **Added**: `afterPack.js` hook to verify native dependencies are properly bundled
+- **Updated**: Build script to remove unnecessary Sharp rebuild steps
+- **Enhanced**: Build verification with diagnostic output for troubleshooting
+
+### 🔧 Technical Details
+
+#### Electron Builder Configuration
+```json
+"asarUnpack": [
+  "**/node_modules/sharp/**/*",
+  "**/node_modules/@img/**/*"
+]
+```
+- Ensures all Sharp-related native binaries are unpacked from ASAR
+- Includes platform-specific `@img/*` packages containing libvips binaries
+
+#### Build Verification
+- Added `afterPack.js` script to validate Sharp and @img packages are properly unpacked
+- Provides diagnostic output during the build process
+- Helps prevent similar bundling issues in future releases
+
+### ✅ Verification
+- AppImage launches successfully without Sharp errors
+- Image processing and thumbnail generation work correctly
+- Database initialization and all core features functional
+
+---
+
 # Photo Selector v1.2.0 Release Notes
 
 ## 🎬 Preview System Overhaul & Video Experience Enhancement
