@@ -1,3 +1,44 @@
+# Photo Selector v1.2.2 Release Notes
+
+## 📁 Folder Navigation & Enhanced File Management
+
+This release introduces comprehensive folder navigation capabilities, allowing users to browse through directories, navigate back to previous folders, and maintain navigation history for a more intuitive file browsing experience.
+
+### ✨ What's New in v1.2.2
+
+#### 📁 Folder Navigation System
+- **Open Folder Button**: New prominent "Open Photo Folder" button for easy folder selection
+- **Back Navigation**: "Back" button to navigate to the previous folder in the browsing history
+- **Folder History Tracking**: Maintains navigation history for seamless folder traversal
+- **Current Folder Tracking**: Displays and tracks the currently opened folder path
+- **Enhanced File Loading**: Improved file loading from selected folders with better error handling
+
+#### 🎨 User Interface Improvements
+- **Navigation Toolbar**: Added dedicated navigation buttons in the toolbar
+- **Visual Feedback**: Clear visual indicators for navigation actions
+- **Responsive Design**: Navigation elements adapt to different screen sizes
+- **Intuitive Layout**: Logical placement of folder navigation controls
+
+#### 🔧 Technical Enhancements
+- **IPC Communication**: Enhanced inter-process communication for folder operations
+- **State Management**: Improved state tracking for folder navigation and history
+- **Error Handling**: Better error handling for folder access and file loading operations
+- **Performance Optimization**: Efficient folder scanning and file enumeration
+
+### 🐛 Bug Fixes & Improvements
+- **Fixed**: Folder navigation state persistence across app sessions
+- **Fixed**: Navigation history clearing when opening new folders
+- **Enhanced**: File loading performance for large directories
+- **Improved**: Error messages for inaccessible folders or files
+
+### 🔧 Technical Implementation
+- **Main Process**: Added folder dialog handling and directory scanning
+- **Renderer Process**: Implemented navigation UI and state management
+- **IPC Handlers**: New IPC channels for folder operations and navigation
+- **Database Integration**: Folder paths stored for quick access and history
+
+---
+
 # Photo Selector v1.2.1 Release Notes
 
 ## 🛠️ Critical Bug Fix - Sharp Library AppImage Support
