@@ -156,7 +156,7 @@ class PhotoSelectorRenderer {
 
         // Create photo items for each file
         files.forEach((file, index) => {
-          const photoItem = this.createPhotoItem(file, index + folders.length);
+          const photoItem = this.createPhotoItem(file, index);
           photoGrid.appendChild(photoItem);
         });
 
